@@ -1,89 +1,93 @@
-# Sewa - AI-Powered Healthcare Companion 🏥
+<div align="center">
+  <h1>🏥 Sewa - AI-Powered Healthcare Companion</h1>
+  <p><strong>Bridging the gap between patients and proactive healthcare with Gemini AI.</strong></p>
 
-![License](https://img.shields.io/badge/license-MIT-blue.svg)
-![React](https://img.shields.io/badge/React-19.2-61DAFB?logo=react)
-![Vite](https://img.shields.io/badge/Vite-6.2-646CFF?logo=vite)
-![Firebase](https://img.shields.io/badge/Firebase-Integrated-FFCA28?logo=firebase)
-![Gemini](https://img.shields.io/badge/AI-Gemini%201.5-8E75B2?logo=google-gemini)
+  <p>
+    <a href="#-demo">View Demo</a> •
+    <a href="#-how-to-run">How to Run</a> •
+    <a href="#-features">Features</a>
+  </p>
 
-Sewa ("Service") is a comprehensive, AI-driven healthcare companion designed to simplify personal health management. From tracking appointments and medications to providing intelligent symptom analysis and mental wellness support, Sewa bridges the gap between patients and proactive healthcare.
-
----
-
-## ✨ Features
-
-- **🩺 Smart Dashboard**: Real-time overview of vitals, upcoming appointments, and daily mood.
-- **🤖 AI Symptom Checker**: Powered by **Google Gemini**, offering detailed analysis and specialist recommendations.
-- **💊 Medication Manager**: Track subscriptions and get reminders.
-- **📄 Medical Records OCR**: Upload reports, extract text, and translate medical jargon instantly.
-- **🧘 Mental Wellness**: Mood tracking, guided meditations, and an empathetic AI chat companion.
-- **🏥 Vitals Monitor**: Detailed charts for Heart Rate, BP, and SpO2.
-- **🌐 Multilingual**: Seamless English/Spanish support.
+  ![React](https://img.shields.io/badge/React-19.2-61DAFB?style=for-the-badge&logo=react)
+  ![Vite](https://img.shields.io/badge/Vite-6.2-646CFF?style=for-the-badge&logo=vite)
+  ![Firebase](https://img.shields.io/badge/Firebase-Integrated-FFCA28?style=for-the-badge&logo=firebase)
+  ![Gemini](https://img.shields.io/badge/Gemini-1.5%20Flash-8E75B2?style=for-the-badge&logo=google-gemini)
+  ![Tailwind](https://img.shields.io/badge/Tailwind-CSS-38B2AC?style=for-the-badge&logo=tailwind-css)
+</div>
 
 ---
 
-## 🛠️ Tech Stack
+## 💡 Inspiration
 
-- **Frontend**: React 19, TypeScript, Tailwind CSS
-- **Build Tool**: Vite
-- **AI Engine**: Google Gemini API (`@google/genai`)
-- **Database**: Firebase Firestore
-- **Charts**: Recharts
-- **Icons**: Lucide React
+In a world where healthcare systems are overwhelmed, patients often struggle to navigate their own health journey. From misinterpreting symptoms to forgetting complications with medication, the gap in **personal health agency** is widening.
+
+We built **Sewa** (meaning "Service" in Sanskrit) to bridge this gap. We wanted to create not just a tracker, but a true **Companion**—one that listens, understands medical jargon, and helps you stay on top of your well-being, powered by the latest in Generative AI.
+
+## 🚀 What it does
+
+Sewa is a comprehensive health platform that acts as your personal medical assistant:
+
+-   **� AI Symptom Checker**: Speak or type your symptoms seamlessly. Powered by **Google Gemini**, it understands nuance and suggests potential causes and specialists.
+-   **📄 Smart OCR & Translation**: Upload a photo of a complex medical report. Sewa reads it, extracts the text, and translates technical jargon into plain English (or Spanish), highlighting what matters.
+-   **💊 Medication Guardian**: Never miss a dose. Tracks your schedule and reminds you effectively.
+-   **🏥 Vitals Dashboard**: A real-time (simulated) monitor for heart rate and blood pressure, visualizing your trends over time.
+-   **🧘 Mental Wellness Hub**: Because health is holistic. Includes mood tracking, AI-guided meditation, and an empathetic chat companion for when you just need to talk.
+
+## ⚙️ How we built it
+
+-   **Frontend**: Built with **React 19** and **TypeScript** for a robust, type-safe robust architecture.
+-   **Styling**: **Tailwind CSS** gave us the speed to create a clean, medical-grade yet friendly UI.
+-   **AI Engine**: We integrated **Google's Gemini 1.5 Flash** (via `@google/genai`) for its speed and multimodal capabilities. It powers the symptom checking, report analysis, and the wellness chatbot.
+-   **Database**: **Firebase Firestore** handles real-time data syncing for appointments and records.
+-   **Speech API**: Utilized the browser's native **Web Speech API** for accessible voice interactions.
+
+## 🧠 Challenges we ran into
+
+-   **Prompt Engineering for Medical Safety**: Getting an AI to be helpful without providing dangerous medical advice was tricky. We spent hours refining the system prompts to ensure Sewa always recommends seeing a doctor when necessary.
+-   **OCR accuracy**: Extracting text from blurry photos of medical reports is hard. We had to combine image preprocessing with Gemini's vision capabilities to get accurate results.
+
+## 🏆 Accomplishments that we're proud of
+
+-   **Multimodal Interaction**: Users can talk to Sewa or show it images, making it accessible to elderly users or those with limited literacy.
+-   **No-Build-Step Setup**: We optimized the dev experience so you can start it almost instantly.
+-   **Real-time Vitals**: The animated vitals monitor really brings the dashboard to life!
+
+## 🔮 What's next for Sewa
+
+-   **Wearable Integration**: Connecting to Apple Health/Google Fit for real vitals.
+-   **Doctor Portal**: A view for physicians to see the patient's holistic data.
+-   **Drug Interaction Checks**: Automatically warning users if two of their meds might react.
 
 ---
 
-## 🚀 Getting Started
+## 🏃 How to Run
 
-Follow these steps to set up the project locally.
-
-### Prerequisites
-
-- Node.js (v18+)
-- Firebase Account
-- Google Gemini API Key
-
-### Installation
-
-1.  **Clone the repository**
+1.  **Clone the Repo**
     ```bash
     git clone https://github.com/Khushi-Roy-123/SEWA-2.0.git
     cd SEWA-2.0
     ```
 
-2.  **Install dependencies**
+2.  **Install Dependencies**
     ```bash
     npm install
     ```
 
-3.  **Environment Setup**
-    Create a `.env` file in the root directory and add your API keys:
+3.  **Environment Variables**
+    Create a `.env` file and add your keys:
     ```env
-    # Gemini AI
-    VITE_GEMINI_API_KEY=your_gemini_key_here
-
-    # Firebase Config
-    VITE_FIREBASE_API_KEY=your_firebase_api_key
-    VITE_FIREBASE_AUTH_DOMAIN=your_project.firebaseapp.com
-    VITE_FIREBASE_PROJECT_ID=your_project_id
-    VITE_FIREBASE_STORAGE_BUCKET=your_project.appspot.com
-    VITE_FIREBASE_MESSAGING_SENDER_ID=your_sender_id
-    VITE_FIREBASE_APP_ID=your_app_id
+    VITE_GEMINI_API_KEY=your_key_here
+    # Firebase config keys...
+    VITE_FIREBASE_API_KEY=your_key
     ```
 
-4.  **Run Development Server**
+4.  **Launch**
     ```bash
     npm run dev
     ```
-    Open [http://localhost:3000](http://localhost:3000) to view it in the browser.
 
 ---
-
-## 🤝 Contributing
-
-Contributions are welcome! Please fork the repository and submit a Pull Request.
-
-## 📄 License
-
-This project is licensed under the MIT License.
+<div align="center">
+    Made with ❤️ for the Hackathon
+</div>
 
