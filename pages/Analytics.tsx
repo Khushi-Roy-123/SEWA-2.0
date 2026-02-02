@@ -1,5 +1,6 @@
+
 import React, { useState, useEffect } from 'react';
-import { generateJSON } from '../lib/ai';
+import { GoogleGenAI, Type } from "@google/genai";
 import { useTranslations } from '../lib/i18n';
 import { ChartBarIcon, SparklesIcon, FileTextIcon } from '../components/Icons';
 
@@ -48,7 +49,7 @@ const Analytics: React.FC = () => {
         setIsLoading(true);
         setError(null);
         try {
-
+            const ai = new GoogleGenAI({ apiKey: process.env.API_KEY as string });
             
             // Collect records
             const storedRecords = localStorage.getItem('records') || '[]';
@@ -72,18 +73,45 @@ const Analytics: React.FC = () => {
             - summary: A 3-sentence summary of health status.
             - recommendations: Array of 4 actionable health steps.
             - dietPlan: An object with 'calories' (number), 'breakdown' (macro string), and 'suggestedFoods' (array of 5 items).
-            - trendPoints: An array of up to 5 objects {date: string, score: number} visualizing health progress based on the dates of records provided.
-            
-            Ensure the output matches this structure:
-            {
-              "healthScore": number,
-              "summary": string,
-              "recommendations": string[],
-              "dietPlan": { "calories": number, "breakdown": string, "suggestedFoods": string[] },
-              "trendPoints": [{ "date": string, "score": number }]
-            }`;
+            - trendPoints: An array of up to 5 objects {date: string, score: number} visualizing health progress based on the dates of records provided.`;
 
-            const result = await generateJSON(prompt);
+            const schema = {
+                type: Type.OBJECT,
+                properties: {
+                    healthScore: { type: Type.NUMBER },
+                    summary: { type: Type.STRING },
+                    recommendations: { type: Type.ARRAY, items: { type: Type.STRING } },
+                    dietPlan: {
+                        type: Type.OBJECT,
+                        properties: {
+                            calories: { type: Type.NUMBER },
+                            breakdown: { type: Type.STRING },
+                            suggestedFoods: { type: Type.ARRAY, items: { type: Type.STRING } }
+                        }
+                    },
+                    trendPoints: {
+                        type: Type.ARRAY,
+                        items: {
+                            type: Type.OBJECT,
+                            properties: {
+                                date: { type: Type.STRING },
+                                score: { type: Type.NUMBER }
+                            }
+                        }
+                    }
+                }
+            };
+
+            const response = await ai.models.generateContent({
+                model: 'gemini-2.5-flash',
+                contents: prompt,
+                config: {
+                    responseMimeType: "application/json",
+                    responseSchema: schema
+                }
+            });
+
+            const result = JSON.parse(response.text) as AnalyticsReport;
             result.timestamp = new Date().toISOString();
             
             setReport(result);

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { generateJSON } from '../lib/ai';
+import { GoogleGenAI, Type } from "@google/genai";
 import { useTranslations } from '../lib/i18n';
 
 interface GenericDrug {
@@ -32,30 +32,32 @@ const DrugPrices: React.FC = () => {
         setSources([]);
 
         try {
-            // Updated prompt to not rely on "today's search results" but general knowledge, 
-            // as OpenRouter might not have live search tools enabled by default.
-            const prompt = `For the drug "${searchQuery}", provide a typical price in USD for the brand name version and list 2-3 generic alternatives with their names, manufacturers, and typical prices. 
-            
-            Provide the output as a valid JSON object ONLY, with the structure:
-            { 
-              "brandName": "string", 
-              "brandPrice": number, 
-              "generics": [{ "name": "string", "manufacturer": "string", "price": number }] 
-            }
-            
-            If the drug is already a generic (like 'Ibuprofen'), treat it as the brand name and find other generic manufacturers. Ensure prices are realistic estimates.`;
+            const ai = new GoogleGenAI({ apiKey: process.env.API_KEY as string });
 
-            const parsedJson = await generateJSON(prompt);
+            const prompt = `For the drug "${searchQuery}", provide a typical price in USD for the brand name version and list 2-3 generic alternatives with their names, manufacturers, and typical prices. Use today's search results to get the most current pricing information. Provide the output as a valid JSON object ONLY, with the structure { "brandName": string, "brandPrice": number, "generics": [{ "name": string, "manufacturer": string, "price": number }] }. If the drug is already a generic (like 'Ibuprofen'), treat it as the brand name and find other generic manufacturers. Ensure prices are realistic numbers.`;
+
+            const response = await ai.models.generateContent({
+                model: 'gemini-2.5-flash',
+                contents: prompt,
+                config: {
+                    tools: [{ googleSearch: {} }],
+                },
+            });
             
-            // Search sources are not available with standard OpenRouter text generation
-            setSources([]);
+            const groundingChunks = response.candidates?.[0]?.groundingMetadata?.groundingChunks || [];
+            setSources(groundingChunks.filter(chunk => chunk.web));
+
+            const jsonText = response.text.trim();
+            // Clean the response to ensure it's valid JSON
+            const cleanedJsonText = jsonText.replace(/^```json\s*|```\s*$/g, '');
             
+            const parsedJson = JSON.parse(cleanedJsonText) as DrugPriceData;
+
             if (parsedJson.brandPrice && parsedJson.generics) {
                 setPriceData(parsedJson);
             } else {
                 throw new Error("Invalid response structure from API.");
             }
-
 
         } catch (err) {
             console.error("Error fetching drug prices:", err);

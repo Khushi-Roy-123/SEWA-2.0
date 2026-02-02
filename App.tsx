@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import Layout from './components/Layout';
 import Dashboard from './pages/Dashboard';
@@ -11,84 +12,84 @@ import UploadRecord from './pages/UploadRecord';
 import TranslatedRecord from './pages/TranslatedRecord';
 import VitalsMonitor from './pages/VitalsMonitor';
 import MentalHealth from './pages/MentalHealth';
-import MentalHealthPrediction from './pages/MentalHealthPrediction';
 import DrugPrices from './pages/DrugPrices';
 import Analytics from './pages/Analytics';
 import ShareProfile from './pages/ShareProfile';
 import PublicProfile from './pages/PublicProfile';
-import Login from './pages/Login';
-import Register from './pages/Register';
 import { TranslationsProvider } from './lib/i18n';
-import { AuthProvider, useAuth } from './context/AuthContext';
-
-import { HashRouter, useLocation, useNavigate } from 'react-router-dom';
-
-// Wrapper to handle hash changes for legacy components if needed, or fully migrate to Router
-const AppContent: React.FC = () => {
-    // We can now use useLocation and useNavigate!
-    const location = useLocation();
-    const navigate = useNavigate();
-    const [symptomsForRec, setSymptomsForRec] = useState('');
-    const [extractedRecordText, setExtractedRecordText] = useState('');
-    const { user, loading } = useAuth();
-  
-    // Redirect to login if not authenticated - REMOVED for public access
-    useEffect(() => {
-       // Auth check removed
-    }, []);
-    
-    // Legacy support: Map hash changes or just rely on router
-    // For now, let's map the renderPage logic to Routes in the next step, but strictly 
-    // replacing the manual renderPage with Routes is cleaner.
-    // However, to keep it simple and consistent with the user's existing structure, 
-    // let's reimplement renderPage using location.pathname
-    
-    const renderPage = () => {
-        if (loading) return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
-        
-        const path = location.pathname;
-
-        // Route matching
-        if (path.startsWith('/public-profile')) return <PublicProfile />;
-
-        // Protected routes
-        switch (path) {
-            case '/appointments': return <Layout><Appointments /></Layout>;
-            case '/medications': return <Layout><Medications /></Layout>;
-            case '/records': return <Layout><Records /></Layout>;
-            case '/upload-record': return <Layout><UploadRecord onTextExtracted={(text) => { setExtractedRecordText(text); navigate('/translated-record'); }} /></Layout>;
-            case '/translated-record': return <Layout><TranslatedRecord extractedText={extractedRecordText} /></Layout>;
-            case '/profile': return <Layout><Profile /></Layout>;
-            case '/symptoms': return <Layout><SymptomInput onSubmit={(symptoms) => { setSymptomsForRec(symptoms); navigate('/recommendations'); }} /></Layout>;
-            case '/recommendations': return <Layout><Recommendations symptoms={symptomsForRec} /></Layout>;
-            case '/vitals': return <Layout><VitalsMonitor /></Layout>;
-            case '/mental-health': return <Layout><MentalHealth /></Layout>;
-            case '/mental-health-prediction': return <Layout><MentalHealthPrediction /></Layout>;
-            case '/drug-prices': return <Layout><DrugPrices /></Layout>;
-            case '/analytics': return <Layout><Analytics /></Layout>;
-            case '/share': return <Layout><ShareProfile /></Layout>;
-            case '/':
-            default:
-                return <Layout><Dashboard /></Layout>;
-        }
-    };
-
-    return <>{renderPage()}</>;
-};
-
-import ErrorBoundary from './components/ErrorBoundary';
 
 const App: React.FC = () => {
+  const [route, setRoute] = useState(window.location.hash);
+  const [symptomsForRec, setSymptomsForRec] = useState('');
+  const [extractedRecordText, setExtractedRecordText] = useState('');
+
+  useEffect(() => {
+    const handleHashChange = () => {
+      setRoute(window.location.hash);
+    };
+
+    window.addEventListener('hashchange', handleHashChange);
+    
+    return () => {
+      window.removeEventListener('hashchange', handleHashChange);
+    };
+  }, []);
+  
+  const handleSymptomSubmit = (symptoms: string) => {
+    setSymptomsForRec(symptoms);
+    window.location.hash = '#/recommendations';
+  };
+
+  const handleTextExtracted = (text: string) => {
+    setExtractedRecordText(text);
+    window.location.hash = '#/translated-record';
+  };
+
+  const renderPage = () => {
+    // Check for public profile (simplified sharing)
+    if (route.startsWith('#/public-profile')) {
+      return <PublicProfile />;
+    }
+
+    switch (route) {
+      case '#/appointments':
+        return <Appointments />;
+      case '#/medications':
+        return <Medications />;
+      case '#/records':
+        return <Records />;
+      case '#/upload-record':
+        return <UploadRecord onTextExtracted={handleTextExtracted} />;
+      case '#/translated-record':
+        return <TranslatedRecord extractedText={extractedRecordText} />;
+      case '#/profile':
+        return <Profile />;
+      case '#/symptoms':
+        return <SymptomInput onSubmit={handleSymptomSubmit} />;
+      case '#/recommendations':
+        return <Recommendations symptoms={symptomsForRec} />;
+      case '#/vitals':
+        return <VitalsMonitor />;
+      case '#/mental-health':
+        return <MentalHealth />;
+      case '#/drug-prices':
+        return <DrugPrices />;
+      case '#/analytics':
+        return <Analytics />;
+      case '#/share':
+        return <ShareProfile />;
+      case '#/':
+      default:
+        return <Dashboard />;
+    }
+  };
+
   return (
-    <ErrorBoundary>
-      <TranslationsProvider>
-        <AuthProvider>
-          <HashRouter>
-              <AppContent />
-          </HashRouter>
-        </AuthProvider>
-      </TranslationsProvider>
-    </ErrorBoundary>
+    <TranslationsProvider>
+      <Layout>
+        {renderPage()}
+      </Layout>
+    </TranslationsProvider>
   );
 };
 

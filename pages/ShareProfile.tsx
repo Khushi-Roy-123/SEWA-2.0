@@ -1,31 +1,55 @@
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useTranslations } from '../lib/i18n';
 import { QrCodeIcon, UserIcon, HeartbeatIcon } from '../components/Icons';
-import { useAuth } from '../context/AuthContext';
-import { QRCodeCanvas } from 'qrcode.react';
+
+declare global {
+    interface Window {
+        QRCode: any;
+    }
+}
 
 const ShareProfile: React.FC = () => {
     const { t } = useTranslations();
-    const { user } = useAuth();
     const [qrGenerated, setQrGenerated] = useState(false);
-    const [copied, setCopied] = useState(false);
-    
-    // Construct the share URL
-    const shareUrl = `${window.location.origin}${window.location.pathname}#/public-profile?id=${user?.id || 'mock-user-123'}`;
+    const [profile, setProfile] = useState<any>(null);
+    const qrRef = useRef<HTMLDivElement>(null);
 
-    const handleGenerate = () => {
+    useEffect(() => {
+        const stored = localStorage.getItem('profile_data');
+        if (stored) setProfile(JSON.parse(stored));
+        else setProfile({ name: 'Alex Doe', bloodGroup: 'O+', allergies: 'Penicillin, Peanuts' });
+    }, []);
+
+    const generateQRCode = () => {
         setQrGenerated(true);
-    };
-    
-    const handleCopyLink = async () => {
-         try {
-            await navigator.clipboard.writeText(shareUrl);
-            setCopied(true);
-            setTimeout(() => setCopied(false), 2000);
-        } catch (err) {
-            console.error('Failed to copy URL:', err);
-        }
+        // Wait for DOM to render the ref
+        setTimeout(() => {
+            if (qrRef.current) {
+                qrRef.current.innerHTML = "";
+                // Create a canvas element for node-qrcode
+                const canvas = document.createElement('canvas');
+                qrRef.current.appendChild(canvas);
+                
+                // Generate a "Public" URL. 
+                const shareUrl = `${window.location.origin}${window.location.pathname}#/public-profile?user=alex`;
+                
+                // Use the node-qrcode (soldair) API as defined in index.html
+                if (window.QRCode && window.QRCode.toCanvas) {
+                    window.QRCode.toCanvas(canvas, shareUrl, {
+                        width: 256,
+                        margin: 2,
+                        color: {
+                            dark: "#0c4a6e", // sky-900
+                            light: "#ffffff"
+                        },
+                        errorCorrectionLevel: 'H'
+                    }, (error: any) => {
+                        if (error) console.error('QR Generation Error:', error);
+                    });
+                }
+            }
+        }, 100);
     };
 
     return (
@@ -53,12 +77,12 @@ const ShareProfile: React.FC = () => {
                     </div>
 
                     <div className="flex gap-6 mb-8">
-                        <img src={user?.profilePhoto || "https://picsum.photos/200"} alt="Profile" className="w-24 h-24 rounded-2xl border-2 border-sky-400 object-cover" />
+                        <img src="https://picsum.photos/200" alt="Profile" className="w-24 h-24 rounded-2xl border-2 border-sky-400 object-cover" />
                         <div className="space-y-1">
-                            <p className="text-2xl font-bold">{user?.name || 'Guest User'}</p>
+                            <p className="text-2xl font-bold">{profile?.name || 'Alex Doe'}</p>
                             <div className="flex items-center gap-2">
                                 <span className="bg-sky-500 text-xs font-bold px-2 py-0.5 rounded uppercase">{t('bloodGroup')}</span>
-                                <span className="text-lg font-bold">{user?.bloodGroup || 'O+'}</span>
+                                <span className="text-lg font-bold">{profile?.bloodGroup || 'O+'}</span>
                             </div>
                         </div>
                     </div>
@@ -66,7 +90,7 @@ const ShareProfile: React.FC = () => {
                     <div className="space-y-4">
                         <div className="bg-sky-950/40 p-4 rounded-2xl">
                             <p className="text-[10px] font-bold text-sky-400 uppercase tracking-widest mb-1">{t('allergies')}</p>
-                            <p className="text-sm font-medium">{user?.allergies || 'No known allergies'}</p>
+                            <p className="text-sm font-medium">{profile?.allergies || 'No known allergies'}</p>
                         </div>
                         <div className="bg-sky-950/40 p-4 rounded-2xl">
                             <p className="text-[10px] font-bold text-sky-400 uppercase tracking-widest mb-1">Medications</p>
@@ -83,7 +107,7 @@ const ShareProfile: React.FC = () => {
                                 <QrCodeIcon />
                             </div>
                             <button
-                                onClick={handleGenerate}
+                                onClick={generateQRCode}
                                 className="w-full py-4 bg-sky-600 text-white font-bold rounded-2xl shadow-lg hover:bg-sky-700 transition-all flex items-center justify-center gap-2"
                             >
                                 <QrCodeIcon />
@@ -91,29 +115,15 @@ const ShareProfile: React.FC = () => {
                             </button>
                         </div>
                     ) : (
-                        <div className="space-y-6 animate-in fade-in zoom-in duration-500 w-full flex flex-col items-center">
+                        <div className="space-y-6 animate-in fade-in zoom-in duration-500">
                             <div className="p-4 bg-white border-8 border-sky-50 rounded-3xl shadow-inner">
-                                <QRCodeCanvas
-                                    value={shareUrl}
-                                    size={256}
-                                    bgColor={"#ffffff"}
-                                    fgColor={"#0c4a6e"}
-                                    level={"H"}
-                                    includeMargin={true}
-                                />
+                                <div ref={qrRef} className="p-2"></div>
                             </div>
                             <p className="text-slate-800 font-bold text-lg">{t('scanMe')}</p>
-                            <p className="text-sm text-slate-400 max-w-xs mx-auto">Scan this code to access the verified patient profile.</p>
-                            
-                            <div className="flex gap-4 justify-center w-full">
-                                <button onClick={handleCopyLink} className="text-sky-600 font-bold text-sm hover:underline">
-                                    {copied ? 'Link Copied!' : 'Copy Link'}
-                                </button>
-                                <span className="text-slate-300">|</span>
-                                <button onClick={() => setQrGenerated(false)} className="text-slate-500 font-bold text-sm hover:underline">
-                                    Close
-                                </button>
-                            </div>
+                            <p className="text-sm text-slate-400 max-w-xs">Scan this code with any mobile device to access the verified patient summary immediately.</p>
+                            <button onClick={() => setQrGenerated(false)} className="text-sky-600 font-bold text-sm hover:underline">
+                                Regenerate Code
+                            </button>
                         </div>
                     )}
                 </div>

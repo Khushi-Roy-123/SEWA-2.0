@@ -1,112 +1,57 @@
-<div align="center">
-  <h1>🏥 Sewa - AI-Powered Healthcare Companion</h1>
-  <p><strong>Bridging the gap between patients and proactive healthcare with Gemini AI.</strong></p>
+# Sewa - Your AI-Powered Healthcare Companion 🤖
 
-  <p>
-    <a href="#-demo">View Demo</a> •
-    <a href="#-how-to-run">How to Run</a> •
-    <a href="#-features">Features</a>
-  </p>
+Sewa is a modern, comprehensive healthcare companion application designed to empower users to manage their health proactively. Built with a clean, responsive interface, Sewa leverages the power of the Google Gemini API to provide intelligent insights, streamline health tracking, and bridge language barriers in medical care.
 
-![React](https://img.shields.io/badge/React-19.2-61DAFB?style=for-the-badge&logo=react)
-![Vite](https://img.shields.io/badge/Vite-6.2-646CFF?style=for-the-badge&logo=vite)
-![Firebase](https://img.shields.io/badge/Firebase-Integrated-FFCA28?style=for-the-badge&logo=firebase)
-![Gemini](https://img.shields.io/badge/Gemini-1.5%20Flash-8E75B2?style=for-the-badge&logo=google-gemini)
-![Tailwind](https://img.shields.io/badge/Tailwind-CSS-38B2AC?style=for-the-badge&logo=tailwind-css)
+## 🚀 Live Link
 
-</div>
+[**Access the live application here**](https://your-live-link-here.com) _(Replace with your actual URL)_
 
 ---
 
-## 💡 Inspiration
+## ✨ Key Features
 
-In a world where healthcare systems are overwhelmed, patients often struggle to navigate their own health journey. From misinterpreting symptoms to forgetting complications with medication, the gap in **personal health agency** is widening.
+### 🩺 Core Health Management
+- **Dashboard:** A centralized hub providing an at-a-glance summary of your health, including upcoming appointments, next medication reminders, and quick access to essential tools.
+- **Medication Management:** Add, track, and manage your medications. Set custom reminders and receive timely browser notifications to ensure you never miss a dose.
+- **Appointment Tracking:** Keep a clear record of all your upcoming and past medical appointments.
+- **Profile Management:** Easily manage your personal information and emergency contact details.
 
-We built **Sewa** (meaning "Service" in Sanskrit) to bridge this gap. We wanted to create not just a tracker, but a true **Companion**—one that listens, understands medical jargon, and helps you stay on top of your well-being, powered by the latest in Generative AI.
+### 🤖 AI-Powered Intelligence
+- **Symptom Checker:** Describe symptoms via text or multi-language voice input. Receive AI-generated recommendations for relevant medical specialists.
+- **In-Depth Analysis:** Go beyond basic recommendations with a deep analysis of your symptoms, grounded in Google Search, providing potential conditions, severity assessments, and next steps.
+- **AI Document Analysis:**
+  - **Upload & Scan:** Upload medical records from a file or capture them using your device's camera.
+  - **Text Extraction (OCR):** AI automatically extracts all readable text from your document images.
+  - **Translation & Highlighting:** Translate extracted text and see critical information—diagnoses, medications, lab values—automatically highlighted.
+- **Drug Price Comparison:** Search for any medication and get real-time price comparisons between brand-name and generic alternatives, grounded in Google Search.
+- **AI Wellness Companion:** Engage in real-time voice conversations with a supportive AI companion. The companion provides empathetic support and can suggest a guided meditation when it detects stress.
+- **Emergency Alert Generation:** Critical vital readings can trigger an AI-generated, concise emergency alert message for your emergency contact.
 
-## 🚀 What it does
+### 📊 Advanced Health Tracking
+- **Vital Signs Monitor (Simulated):** A real-time dashboard to monitor key vitals (Heart Rate, Blood Pressure, SpO2). Features historical data charts with zoom capabilities and an emergency alert system.
+- **Mental Wellness Hub:** A dedicated space for mental well-being:
+  - **Mood Tracker:** Log your daily mood and visualize trends over the week.
+  - **Guided Meditation:** Access a quick, 5-minute guided meditation session.
+  - **Personal Journal:** A private space to write down your thoughts and reflections.
 
-Sewa is a comprehensive health platform that acts as your personal medical assistant:
-
-- **� AI Symptom Checker**: Speak or type your symptoms seamlessly. Powered by **Google Gemini**, it understands nuance and suggests potential causes and specialists.
-- **📄 Smart OCR & Translation**: Upload a photo of a complex medical report. Sewa reads it, extracts the text, and translates technical jargon into plain English (or Spanish), highlighting what matters.
-- **💊 Medication Guardian**: Never miss a dose. Tracks your schedule and reminds you effectively.
-- **🏥 Vitals Dashboard**: A real-time (simulated) monitor for heart rate and blood pressure, visualizing your trends over time.
-- **🧘 Mental Wellness Hub**: Because health is holistic. Includes mood tracking, AI-guided meditation, and an empathetic chat companion.
-- **🧠 AI Mental Health Assessment**: A machine-learning powered tool (TensorFlow.js) that analyzes your lifestyle and workplace factors to predict likelihood of seeking treatment, strictly running client-side for privacy.
-
-## ⚙️ How we built it
-
-- **Frontend**: Built with **React 19** and **TypeScript** for a robust, type-safe robust architecture.
-- **Styling**: **Tailwind CSS** gave us the speed to create a clean, medical-grade yet friendly UI.
-- **AI Engine**: **Google Gemini 1.5 Flash** (via OpenRouter) & **TensorFlow.js** (for offline custom models).
-- **Backend**: **Node.js & Express** providing a robust API layer.
-- **Database**: **MongoDB Atlas** (User Data) & **Firebase** (Real-time sync).
-- **Speech API**: Native **Web Speech API**.
-
-## 🧠 Challenges we ran into
-
-- **Prompt Engineering for Medical Safety**: Getting an AI to be helpful without providing dangerous medical advice was tricky. We spent hours refining the system prompts to ensure Sewa always recommends seeing a doctor when necessary.
-- **OCR accuracy**: Extracting text from blurry photos of medical reports is hard. We had to combine image preprocessing with Gemini's vision capabilities to get accurate results.
-
-## 🏆 Accomplishments that we're proud of
-
-- **Multimodal Interaction**: Users can talk to Sewa or show it images, making it accessible to elderly users or those with limited literacy.
-- **No-Build-Step Setup**: We optimized the dev experience so you can start it almost instantly.
-- **Real-time Vitals**: The animated vitals monitor really brings the dashboard to life!
-
-## 🔮 What's next for Sewa
-
-- **Wearable Integration**: Connecting to Apple Health/Google Fit for real vitals.
-- **Doctor Portal**: A view for physicians to see the patient's holistic data.
-- **Drug Interaction Checks**: Automatically warning users if two of their meds might react.
+### 🌐 UI/UX & Accessibility
+- **Responsive Design:** A seamless experience on both desktop and mobile devices.
+- **Global Search:** Instantly find appointments, medications, and health records.
+- **Multilingual Support:** Switch the entire UI between English and Spanish.
+- **Offline Capability:** Access key information without an internet connection, thanks to a robust service worker.
 
 ---
 
----
+## 💻 Tech Stack
 
-## ☁️ Deployment (Vercel)
-
-SEWA 2.0 is configured for **Vercel** out-of-the-box (Frontend + Backend).
-
-1. **Fork/Clone** this repo to your GitHub.
-2. **Import** into Vercel.
-3. **Environment Variables** (Add these in Vercel Dashboard):
-   - `MONGODB_URI`: Connection string for MongoDB Atlas.
-   - `JWT_SECRET`: Random string for security.
-   - `VITE_OPENROUTER_API_KEY`: Your OpenRouter/Gemini API key.
-4. **Deploy**: Vercel will automatically detect `vite build` and the `vercel.json` config.
-
----
-
-## 🏃 How to Run
-
-1.  **Clone the Repo**
-
-    ```bash
-    git clone https://github.com/Khushi-Roy-123/SEWA-2.0.git
-    cd SEWA-2.0
-    ```
-
-2.  **Install Dependencies**
-
-    ```bash
-    npm install
-    ```
-
-3.  **Environment Variables**
-    Create a `.env` file and add your keys:
-
-    ```env
-    VITE_GEMINI_API_KEY=your_key_here
-    # Firebase config keys...
-    VITE_FIREBASE_API_KEY=your_key
-    ```
-
-4.  **Launch**
-
-    ```bash
-    npm run dev
-    ```
-
-    The app will auto-login as a Guest User (Authentication functionality has been removed for ease of access).
+- **Frontend Framework:** `React`
+- **Language:** `TypeScript`
+- **AI/ML:** `Google Gemini API` (`@google/genai`)
+- **Styling:** `Tailwind CSS`
+- **Charting:** `Recharts`
+- **Web APIs:**
+  - Web Speech API
+  - Notifications API
+  - WebRTC (getUserMedia)
+- **Offline Support:** `Service Workers`
+- **Module System:** ES Modules with `Import Maps` (no build step required)

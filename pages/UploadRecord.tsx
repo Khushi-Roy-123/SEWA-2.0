@@ -1,5 +1,5 @@
 import React, { useState, useRef, useCallback } from 'react';
-import { generateMultimodal } from '../lib/ai';
+import { GoogleGenAI } from "@google/genai";
 import { useTranslations } from '../lib/i18n';
 import { UploadIcon, CameraIcon } from '../components/Icons';
 
@@ -79,14 +79,25 @@ const UploadRecord: React.FC<UploadRecordProps> = ({ onTextExtracted }) => {
         setExtractedText('');
 
         try {
+            const ai = new GoogleGenAI({ apiKey: process.env.API_KEY as string });
+            
             const base64Data = imageSrc.split(',')[1];
             const mimeType = imageSrc.split(';')[0].split(':')[1];
 
-            const prompt = "Extract all text from this medical report. Ensure the output is clean and readable.";
+            const imagePart = {
+                inlineData: {
+                    data: base64Data,
+                    mimeType: mimeType,
+                },
+            };
+            const textPart = { text: "Extract all text from this medical report. Ensure the output is clean and readable." };
+
+            const response = await ai.models.generateContent({
+                model: 'gemini-2.5-flash',
+                contents: { parts: [imagePart, textPart] },
+            });
             
-            const responseText = await generateMultimodal(prompt, base64Data, mimeType);
-            
-            setExtractedText(responseText);
+            setExtractedText(response.text);
 
         } catch (err) {
             console.error("Error extracting text:", err);
