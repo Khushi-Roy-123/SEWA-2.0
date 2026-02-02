@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { GoogleGenAI, Type, Modality } from "@google/genai";
+import * as tf from '@tensorflow/tfjs';
+import { generateJSON } from '../lib/ai';
 import { useTranslations } from '../lib/i18n';
 import { CardiologyIcon, NeurologyIcon, DermatologyIcon, GastroenterologyIcon, DefaultSpecialistIcon, SpeakerIcon, ExclamationIcon } from '../components/Icons';
 
@@ -79,6 +80,65 @@ const Recommendations: React.FC<RecommendationsProps> = ({ symptoms }) => {
     const [sources, setSources] = useState<any[]>([]);
     const [isAnalyzing, setIsAnalyzing] = useState(false);
     const [isSpeaking, setIsSpeaking] = useState<string | null>(null); // Holds the reason text being spoken
+    
+    // Custom AI Triage
+    const [triageResult, setTriageResult] = useState<{label: string, confidence: number} | null>(null);
+    const [isTriageLoading, setIsTriageLoading] = useState(true);
+
+    useEffect(() => {
+        if (!symptoms) return;
+
+        const loadModelAndPredict = async () => {
+            setIsTriageLoading(true);
+            try {
+                // Load metadata
+                const metadataReq = await fetch('/models/triage-model/metadata.json');
+                const metadata = await metadataReq.json();
+                
+                // Load model
+                // Note: In development with Vite, public assets are served at root
+                const model = await tf.loadLayersModel('/models/triage-model/model.json');
+                
+                // Tokenize
+                const tokens = symptoms.toLowerCase().replace(/[^\w\s]/g, '').split(/\s+/).filter(w => w.length > 2);
+                const sequence = tokens.map(t => metadata.wordIndex[t] || 0).slice(0, metadata.maxLen);
+                while (sequence.length < metadata.maxLen) sequence.push(0);
+
+                // Predict
+                const input = tf.tensor2d([sequence], [1, metadata.maxLen]);
+                const prediction = model.predict(input) as tf.Tensor;
+                const scores = await prediction.data();
+                
+                // Find max score
+                let maxScore = -1;
+                let maxIndex = -1;
+                for (let i = 0; i < scores.length; i++) {
+                    if (scores[i] > maxScore) {
+                        maxScore = scores[i];
+                        maxIndex = i;
+                    }
+                }
+
+                setTriageResult({
+                    label: metadata.classes[maxIndex],
+                    confidence: maxScore
+                });
+                
+                // Cleanup
+                input.dispose();
+                prediction.dispose();
+                model.dispose();
+
+            } catch (err) {
+                console.error("Failed to load or run local triage model:", err);
+                // Fail silently or show fallback
+            } finally {
+                setIsTriageLoading(false);
+            }
+        };
+
+        loadModelAndPredict();
+    }, [symptoms]);
 
     useEffect(() => {
         if (!symptoms) {
@@ -91,36 +151,24 @@ const Recommendations: React.FC<RecommendationsProps> = ({ symptoms }) => {
             setError(null);
 
             try {
-                const ai = new GoogleGenAI({ apiKey: process.env.API_KEY as string });
+
+                // Modified prompt to include schema instructions for OpenRouter
+                const prompt = `Based on the following symptoms, recommend up to 3 relevant medical specialists. For each specialist, provide a brief, user-friendly reason for the recommendation and list 2-3 sample doctor names (e.g., "Dr. John Smith"). 
                 
-                const responseSchema = {
-                    type: Type.OBJECT,
-                    properties: {
-                        recommendations: {
-                            type: Type.ARRAY,
-                            items: {
-                                type: Type.OBJECT,
-                                properties: {
-                                    specialty: { type: Type.STRING },
-                                    reason: { type: Type.STRING },
-                                    sampleDoctors: { type: Type.ARRAY, items: { type: Type.STRING } }
-                                }
-                            }
-                        }
+                Symptoms: "${symptoms}"
+                
+                Provide the output as a valid JSON object with the following structure:
+                {
+                  "recommendations": [
+                    {
+                      "specialty": "Specialty Name",
+                      "reason": "Reason for recommendation",
+                      "sampleDoctors": ["Dr. Name 1", "Dr. Name 2"]
                     }
-                };
+                  ]
+                }`;
 
-                const response = await ai.models.generateContent({
-                    model: 'gemini-2.5-flash',
-                    contents: `Based on the following symptoms, recommend up to 3 relevant medical specialists. For each specialist, provide a brief, user-friendly reason for the recommendation and list 2-3 sample doctor names (e.g., "Dr. John Smith"). Symptoms: "${symptoms}"`,
-                    config: {
-                        responseMimeType: "application/json",
-                        responseSchema: responseSchema,
-                    }
-                });
-
-                const jsonText = response.text.trim();
-                const parsedJson = JSON.parse(jsonText);
+                const parsedJson = await generateJSON(prompt);
 
                 if (parsedJson.recommendations) {
                     setRecommendations(parsedJson.recommendations);
@@ -146,58 +194,26 @@ const Recommendations: React.FC<RecommendationsProps> = ({ symptoms }) => {
         setSources([]);
 
         try {
-            const ai = new GoogleGenAI({ apiKey: process.env.API_KEY as string });
-
-            const schema: any = {
-                type: Type.OBJECT,
-                properties: {
-                    severityAssessment: {
-                        type: Type.OBJECT,
-                        properties: {
-                            level: { type: Type.STRING, enum: ['Urgent', 'Routine', 'Monitor'] },
-                            reason: { type: Type.STRING }
-                        },
-                        required: ['level', 'reason']
-                    },
-                    potentialConditions: {
-                        type: Type.ARRAY,
-                        items: {
-                            type: Type.OBJECT,
-                            properties: {
-                                name: { type: Type.STRING },
-                                description: { type: Type.STRING },
-                                likelihood: { type: Type.STRING, enum: ['High', 'Medium', 'Low'] }
-                            },
-                             required: ['name', 'description', 'likelihood']
-                        }
-                    },
-                    recommendedNextSteps: { type: Type.ARRAY, items: { type: Type.STRING } },
-                    questionsForDoctor: { type: Type.ARRAY, items: { type: Type.STRING } }
-                },
-                required: ['severityAssessment', 'potentialConditions', 'recommendedNextSteps', 'questionsForDoctor']
-            };
-            
-            const prompt = `Based on these symptoms: "${symptoms}", conduct a deep analysis grounded in web search. Provide a JSON object with:
+            const prompt = `Based on these symptoms: "${symptoms}", conduct a deep analysis. Provide a JSON object with:
             1. 'severityAssessment': Classify as 'Urgent', 'Routine', or 'Monitor' and give a brief reason.
             2. 'potentialConditions': A list of up to 3 potential conditions with name, description, and likelihood ('High', 'Medium', 'Low').
             3. 'recommendedNextSteps': Actionable next steps for the user.
-            4. 'questionsForDoctor': Key questions the user should ask a healthcare professional.`;
+            4. 'questionsForDoctor': Key questions the user should ask a healthcare professional.
             
-            const response = await ai.models.generateContent({
-                model: 'gemini-2.5-flash',
-                contents: prompt,
-                config: {
-                    tools: [{ googleSearch: {} }],
-                    responseMimeType: "application/json",
-                    responseSchema: schema,
-                }
-            });
+            Format as JSON:
+            {
+              "severityAssessment": { "level": "Urgent|Routine|Monitor", "reason": "string" },
+              "potentialConditions": [{ "name": "string", "description": "string", "likelihood": "High|Medium|Low" }],
+              "recommendedNextSteps": ["string"],
+              "questionsForDoctor": ["string"]
+            }`;
+            
+            const parsedJson = await generateJSON(prompt);
 
-            const groundingChunks = response.candidates?.[0]?.groundingMetadata?.groundingChunks || [];
-            setSources(groundingChunks.filter(chunk => chunk.web));
+            // Note: Grounding (web search) is removed for OpenRouter compatibility unless using specific models.
+            // We set sources to empty or could mock them if really needed, but better to omit.
+            setSources([]);
             
-            const jsonText = response.text.trim();
-            const parsedJson = JSON.parse(jsonText);
             setDeepAnalysis(parsedJson);
 
         } catch (err) {
@@ -208,38 +224,16 @@ const Recommendations: React.FC<RecommendationsProps> = ({ symptoms }) => {
         }
     };
     
-    const handleTextToSpeech = async (text: string) => {
-        if (isSpeaking) return;
-        setIsSpeaking(text);
-        try {
-            const ai = new GoogleGenAI({ apiKey: process.env.API_KEY as string });
-            const response = await ai.models.generateContent({
-                model: "gemini-2.5-flash-preview-tts",
-                contents: [{ parts: [{ text: `Read this clearly: ${text}` }] }],
-                config: {
-                    responseModalities: [Modality.AUDIO],
-                    speechConfig: {
-                        voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Kore' } },
-                    },
-                },
-            });
-
-            const base64Audio = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
-            if (base64Audio) {
-                const outputAudioContext = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 24000 });
-                const audioBuffer = await decodeAudioData(decode(base64Audio), outputAudioContext, 24000, 1);
-                const source = outputAudioContext.createBufferSource();
-                source.buffer = audioBuffer;
-                source.connect(outputAudioContext.destination);
-                source.start();
-                source.onended = () => setIsSpeaking(null);
-            } else {
-                setIsSpeaking(null);
-            }
-        } catch (error) {
-            console.error("TTS Error:", error);
+    const handleTextToSpeech = (text: string) => {
+        if (isSpeaking) {
+            window.speechSynthesis.cancel();
             setIsSpeaking(null);
+            return;
         }
+        setIsSpeaking(text);
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.onend = () => setIsSpeaking(null);
+        window.speechSynthesis.speak(utterance);
     };
 
 
@@ -278,6 +272,25 @@ const Recommendations: React.FC<RecommendationsProps> = ({ symptoms }) => {
             <div>
                 <h1 className="text-3xl font-bold text-slate-900">{t('recommendationsTitle')}</h1>
                 <p className="mt-1 text-slate-500">{t('recommendationsSubtitle')}</p>
+                
+                {/* Instant Triage Badge */}
+                {!isTriageLoading && triageResult && (
+                    <div className={`inline-flex items-center gap-2 mt-4 px-4 py-2 rounded-full font-bold text-sm shadow-sm ${
+                        triageResult.label === 'Urgent' ? 'bg-red-100 text-red-700 border border-red-200' :
+                        triageResult.label === 'Routine' ? 'bg-yellow-100 text-yellow-700 border border-yellow-200' :
+                        'bg-blue-100 text-blue-700 border border-blue-200'
+                    }`}>
+                        <span className="relative flex h-3 w-3">
+                          <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${
+                              triageResult.label === 'Urgent' ? 'bg-red-400' : triageResult.label === 'Routine' ? 'bg-yellow-400' : 'bg-blue-400'
+                          }`}></span>
+                          <span className={`relative inline-flex rounded-full h-3 w-3 ${
+                              triageResult.label === 'Urgent' ? 'bg-red-500' : triageResult.label === 'Routine' ? 'bg-yellow-500' : 'bg-blue-500'
+                          }`}></span>
+                        </span>
+                        AI Triage: {triageResult.label} ({(triageResult.confidence * 100).toFixed(0)}%)
+                    </div>
+                )}
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

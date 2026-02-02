@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { GoogleGenAI, Type } from "@google/genai";
+import { generateJSON } from '../lib/ai';
 import { useTranslations } from '../lib/i18n';
 
 interface AnalyzedData {
@@ -38,33 +38,21 @@ const TranslatedRecord: React.FC<TranslatedRecordProps> = ({ extractedText }) =>
             setError(null);
 
             try {
-                const ai = new GoogleGenAI({ apiKey: process.env.API_KEY as string });
-                
-                const responseSchema = {
-                    type: Type.OBJECT,
-                    properties: {
-                        translatedText: { type: Type.STRING, description: `The full medical text translated into ${targetLanguage}.` },
-                        criticalPhrases: {
-                            type: Type.ARRAY,
-                            description: `An array of critical phrases (diagnoses, medications, key lab values) extracted FROM THE TRANSLATED TEXT.`,
-                            items: { type: Type.STRING }
-                        }
-                    }
-                };
-                
-                const prompt = `Analyze the following medical text. First, translate it to ${targetLanguage}. Then, from your translation, identify and extract an array of critical pieces of information (like diagnoses, medication names and dosages, and abnormal lab results). Provide the full translation and the array of critical phrases in a JSON object. Text: "${extractedText}"`;
 
-                const response = await ai.models.generateContent({
-                    model: 'gemini-2.5-flash',
-                    contents: prompt,
-                    config: {
-                        responseMimeType: "application/json",
-                        responseSchema: responseSchema,
-                    }
-                });
+                // const ai = new GoogleGenAI({ apiKey: process.env.API_KEY as string });
+                
+                // Moved schema into the prompt instruction for OpenRouter compatibility
+                const prompt = `Analyze the following medical text. First, translate it to ${targetLanguage}. Then, from your translation, identify and extract an array of critical pieces of information (like diagnoses, medication names and dosages, and abnormal lab results). 
+                
+                Provide the full translation and the array of critical phrases in a JSON object with this structure:
+                {
+                  "translatedText": "The full medical text translated into ${targetLanguage}",
+                  "criticalPhrases": ["phrase 1", "phrase 2"]
+                }
+                
+                Text: "${extractedText}"`;
 
-                const jsonText = response.text.trim();
-                const parsedJson = JSON.parse(jsonText);
+                const parsedJson = await generateJSON(prompt);
 
                 if (parsedJson.translatedText && Array.isArray(parsedJson.criticalPhrases)) {
                     setAnalysis(parsedJson);

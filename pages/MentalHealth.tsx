@@ -257,7 +257,7 @@ const AICompanion: React.FC<{ onSuggestMeditation: () => void }> = ({ onSuggestM
         nextStartTimeRef.current = 0;
 
         try {
-            const ai = new GoogleGenAI({ apiKey: process.env.API_KEY as string });
+            const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY as string });
             const suggestMeditation: FunctionDeclaration = {
                 name: 'suggestMeditation',
                 description: 'Suggests a guided meditation to the user.',
@@ -373,6 +373,10 @@ const AICompanion: React.FC<{ onSuggestMeditation: () => void }> = ({ onSuggestM
         if (status === 'active' || status === 'connecting') {
             stopConversation();
         } else {
+            if (!process.env.GEMINI_API_KEY) {
+                alert("This feature requires a Google Gemini API Key. Please configure VITE_GEMINI_API_KEY in your environment.");
+                return;
+            }
             startConversation();
         }
     };
@@ -554,6 +558,11 @@ const MentalHealth: React.FC = () => {
             <div>
                 <h1 className="text-3xl font-bold text-slate-900">{t('mentalHealthTitle')}</h1>
                 <p className="mt-1 text-slate-500">{t('mentalHealthSubtitle')}</p>
+                <div className="mt-4">
+                    <a href="#/mental-health-prediction" className="inline-flex items-center gap-2 px-6 py-3 bg-indigo-600 text-white font-semibold rounded-lg hover:bg-indigo-700 transition-colors shadow-sm">
+                        <SparklesIcon /> Take AI Assessment
+                    </a>
+                </div>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">

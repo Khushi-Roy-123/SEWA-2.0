@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { GoogleGenAI } from "@google/genai";
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
+import { generateText } from '../lib/ai';
 import { useTranslations } from '../lib/i18n';
 import { HeartbeatIcon } from '../components/Icons';
 
@@ -95,6 +97,8 @@ const BloodPressureChart: React.FC<any & ChartInteractionProps> = ({ data, zoomD
 
 const VitalsMonitor: React.FC = () => {
     const { t } = useTranslations();
+    const { user } = useAuth();
+    const navigate = useNavigate();
     const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>('disconnected');
     const [vitals, setVitals] = useState<Vitals>({ hr: 0, bp: { systolic: 0, diastolic: 0 }, spo2: 0 });
     const [vitalsHistory, setVitalsHistory] = useState<VitalsWithTimestamp[]>([]);
@@ -176,17 +180,20 @@ const VitalsMonitor: React.FC = () => {
         // --- End notification logic ---
 
         try {
-            const ai = new GoogleGenAI({ apiKey: process.env.API_KEY as string });
+            // Fixed: use the vitals passed to the function to avoid closure staleness if any
             const vitalsString = `Heart Rate: ${currentVitals.hr} BPM, Blood Pressure: ${currentVitals.bp.systolic}/${currentVitals.bp.diastolic} mmHg, SpO2: ${currentVitals.spo2}%`;
-            const manualTriggerText = isManual ? "I am manually triggering an emergency alert." : "My vital signs have reached a critical level:";
-            const prompt = `Act as an emergency alert system. My name is Alex. ${manualTriggerText} ${vitalsString}. Please compose a brief, urgent SMS message to my emergency contact, Jane Doe, informing her of the situation and that she needs to check on me immediately. Include the critical readings.`;
-            
-            const response = await ai.models.generateContent({
-                model: 'gemini-2.5-flash',
-                contents: prompt,
-            });
 
-            setAlertMessage(response.text);
+            const manualTriggerText = isManual ? "I am manually triggering an emergency alert." : "My vital signs have reached a critical level:";
+            
+            // Use actual user data or fallbacks
+            const myName = user?.name || "the user";
+            const contactName = user?.emergencyContact?.name || "Emergency Contact";
+
+            const prompt = `Act as an emergency alert system. My name is ${myName}. ${manualTriggerText} ${vitalsString}. Please compose a brief, urgent SMS message to my emergency contact, ${contactName}, informing them of the situation and that they need to check on me immediately. Include the critical readings.`;
+            
+            const responseText = await generateText(prompt);
+
+            setAlertMessage(responseText);
             if (!isManual) {
                 autoAlertSentRef.current = true;
             }
@@ -196,7 +203,7 @@ const VitalsMonitor: React.FC = () => {
         } finally {
             setIsSendingAlert(false);
         }
-    }, [t, isSendingAlert]);
+    }, [t, isSendingAlert, user]); // Added user to dependencies
 
 
     useEffect(() => {

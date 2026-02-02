@@ -11,28 +11,40 @@ declare global {
 
 const ShareProfile: React.FC = () => {
     const { t } = useTranslations();
-    const [qrGenerated, setQrGenerated] = useState(false);
-    const [profile, setProfile] = useState<any>(null);
-    const qrRef = useRef<HTMLDivElement>(null);
+    const [copied, setCopied] = useState(false); // Add missing state
 
     useEffect(() => {
-        const stored = localStorage.getItem('profile_data');
-        if (stored) setProfile(JSON.parse(stored));
-        else setProfile({ name: 'Alex Doe', bloodGroup: 'O+', allergies: 'Penicillin, Peanuts' });
+        const storedProfile = localStorage.getItem('profile_data');
+        if (storedProfile) {
+            setProfile(JSON.parse(storedProfile));
+        }
     }, []);
 
     const generateQRCode = () => {
         setQrGenerated(true);
         // Wait for DOM to render the ref
-        setTimeout(() => {
+        setTimeout(async () => { 
             if (qrRef.current) {
                 qrRef.current.innerHTML = "";
                 // Create a canvas element for node-qrcode
                 const canvas = document.createElement('canvas');
                 qrRef.current.appendChild(canvas);
                 
-                // Generate a "Public" URL. 
-                const shareUrl = `${window.location.origin}${window.location.pathname}#/public-profile?user=alex`;
+                // Generate a "Public" URL.
+                let shareUrl = `${window.location.origin}${window.location.pathname}#/public-profile?user=generic`;
+                if (profile) {
+                    const userSlug = profile.name ? profile.name.toLowerCase().replace(/\s+/g, '-') : 'user';
+                    shareUrl = `${window.location.origin}${window.location.pathname}#/public-profile?user=${userSlug}`;
+                }
+                
+                // Copy URL to clipboard
+                try {
+                    await navigator.clipboard.writeText(shareUrl);
+                    setCopied(true);
+                    setTimeout(() => setCopied(false), 2000);
+                } catch (err) {
+                    console.error('Failed to copy URL to clipboard:', err);
+                }
                 
                 // Use the node-qrcode (soldair) API as defined in index.html
                 if (window.QRCode && window.QRCode.toCanvas) {

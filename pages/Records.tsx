@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { records } from '../lib/data';
+// import { records } from '../lib/data'; // Removed default data
 import { PlusIcon } from '../components/Icons';
 
 const Records: React.FC = () => {
     const [searchQuery, setSearchQuery] = useState('');
-    const [filteredRecords, setFilteredRecords] = useState(records);
+    const [records, setRecords] = useState<any[]>([]); // Start empty
+    const [filteredRecords, setFilteredRecords] = useState<any[]>([]);
 
     useEffect(() => {
         const lowercasedQuery = searchQuery.toLowerCase();

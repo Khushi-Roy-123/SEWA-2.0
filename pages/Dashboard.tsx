@@ -11,6 +11,8 @@ import {
   SparklesIcon
 } from '../components/Icons';
 import { useTranslations } from '../lib/i18n';
+import { useAuth } from '../context/AuthContext';
+import { useNavigate } from 'react-router-dom';
 
 // Local Components for Dashboard
 const StatCard: React.FC<{ label: string; value: string | number; unit?: string; icon: React.ReactNode; color: string }> = ({ label, value, unit, icon, color }) => (
@@ -45,18 +47,19 @@ const { LineChart, Line, ResponsiveContainer, YAxis } = (window as any).Recharts
 
 const Dashboard: React.FC = () => {
     const { t } = useTranslations();
+    const { user } = useAuth(); // Access user from context
+    const navigate = useNavigate(); // Hook for navigation
     const [nextMed, setNextMed] = useState<any>(null);
+    const [upcomingAppointment, setUpcomingAppointment] = useState<any>(null); // Placeholder for now
     const [healthScore, setHealthScore] = useState<number | null>(null);
     const [lastVital, setLastVital] = useState<number | null>(null);
     const [trendData, setTrendData] = useState<any[]>([]);
     const [aiInsights, setAiInsights] = useState<string[]>([]);
-    const [userName, setUserName] = useState('Alex');
+    
+    // Fallback to "User" if no name, though auth should ensure user exists
+    const userName = user?.name ? user.name.split(' ')[0] : 'User';
 
     useEffect(() => {
-        // Load Profile
-        const profile = localStorage.getItem('profile_data');
-        if (profile) setUserName(JSON.parse(profile).name.split(' ')[0]);
-
         // Load Analytics
         const analytics = localStorage.getItem('last_health_analytics');
         if (analytics) {
@@ -124,14 +127,14 @@ const Dashboard: React.FC = () => {
                 />
                 <StatCard 
                     label="Heart Rate" 
-                    value={lastVital || '72'} 
+                    value={lastVital || '--'} 
                     unit="BPM" 
                     icon={<HeartbeatIcon />} 
                     color="bg-rose-100 text-rose-600" 
                 />
                 <StatCard 
                     label="Today's Mood" 
-                    value="Good" 
+                    value="--" 
                     icon={<FaceSmileIcon />} 
                     color="bg-amber-100 text-amber-600" 
                 />
@@ -149,18 +152,18 @@ const Dashboard: React.FC = () => {
                     {/* Primary Engagement Row */}
                     <div className="flex flex-col sm:flex-row gap-6">
                         <PrimaryCard 
-                            title="Dr. Emily Carter"
-                            subtitle="Tomorrow at 10:30 AM • Cardiology"
+                            title={upcomingAppointment ? upcomingAppointment.doctor : "No Appointments"}
+                            subtitle={upcomingAppointment ? `${upcomingAppointment.date} • ${upcomingAppointment.specialty}` : "Schedule a check-up"}
                             icon={<CalendarIcon />}
                             color="bg-sky-600 text-white"
-                            onClick={() => window.location.hash = '#/appointments'}
+                            onClick={() => navigate('/appointments')}
                         />
                         <PrimaryCard 
                             title={nextMed ? nextMed.name : "No pending doses"}
-                            subtitle={nextMed ? `Scheduled for ${nextMed.time}` : "Add your medications"}
+                            subtitle={nextMed ? `Scheduled for ${nextMed.time}` : "Great job keeping up!"}
                             icon={<PillIcon />}
                             color="bg-emerald-500 text-white"
-                            onClick={() => window.location.hash = '#/medications'}
+                            onClick={() => navigate('/medications')}
                         />
                     </div>
 
@@ -171,7 +174,7 @@ const Dashboard: React.FC = () => {
                                 <h2 className="text-xl font-bold text-slate-900">Health Index Trend</h2>
                                 <p className="text-sm text-slate-400">Weekly progress based on your records</p>
                             </div>
-                            <button onClick={() => window.location.hash = '#/analytics'} className="text-sky-600 font-bold text-sm hover:underline">
+                            <button onClick={() => navigate('/analytics')} className="text-sky-600 font-bold text-sm hover:underline">
                                 View Full Report
                             </button>
                         </div>
@@ -207,21 +210,21 @@ const Dashboard: React.FC = () => {
                         <h2 className="text-lg font-bold mb-4 relative z-10">Quick Actions</h2>
                         <div className="grid grid-cols-1 gap-3 relative z-10">
                             <button 
-                                onClick={() => window.location.hash = '#/symptoms'}
+                                onClick={() => navigate('/symptoms')}
                                 className="w-full flex items-center gap-3 bg-sky-800/50 hover:bg-sky-800 p-3 rounded-2xl transition-colors text-sm font-bold"
                             >
                                 <div className="bg-sky-500 p-2 rounded-xl"><StethoscopeIcon /></div>
                                 Check Symptoms
                             </button>
                             <button 
-                                onClick={() => window.location.hash = '#/upload-record'}
+                                onClick={() => navigate('/upload-record')}
                                 className="w-full flex items-center gap-3 bg-sky-800/50 hover:bg-sky-800 p-3 rounded-2xl transition-colors text-sm font-bold"
                             >
                                 <div className="bg-sky-500 p-2 rounded-xl"><UploadIcon /></div>
                                 Upload Record
                             </button>
                             <button 
-                                onClick={() => window.location.hash = '#/vitals'}
+                                onClick={() => navigate('/vitals')}
                                 className="w-full flex items-center gap-3 bg-sky-800/50 hover:bg-sky-800 p-3 rounded-2xl transition-colors text-sm font-bold"
                             >
                                 <div className="bg-sky-500 p-2 rounded-xl"><HeartbeatIcon /></div>
