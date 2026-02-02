@@ -35,28 +35,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [loading, setLoading] = useState<boolean>(true);
 
   useEffect(() => {
-    // Check for token in localStorage on mount
-    const storedToken = localStorage.getItem('auth-token');
-    const storedUser = localStorage.getItem('user-data');
-
-    if (storedToken && storedUser) {
-      try {
-        setToken(storedToken);
-        setUser(JSON.parse(storedUser));
-      } catch (error) {
-        console.error("Failed to parse user data:", error);
-        localStorage.removeItem('user-data');
-        localStorage.removeItem('auth-token');
-      }
-    }
+    // AUTO-LOGIN MOCK USER (Auth Removed)
+    const mockUser: User = {
+        id: 'mock-user-123',
+        name: 'Guest User',
+        email: 'guest@sewa.app'
+    };
+    setUser(mockUser);
+    setToken('mock-token');
     setLoading(false);
   }, []);
 
   const login = (newToken: string, newUser: User) => {
-    setToken(newToken);
-    setUser(newUser);
-    localStorage.setItem('auth-token', newToken);
-    localStorage.setItem('user-data', JSON.stringify(newUser));
+    // No-op
   };
 
   const logout = () => {

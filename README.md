@@ -104,6 +104,9 @@ SEWA 2.0 is configured for **Vercel** out-of-the-box (Frontend + Backend).
     ```
 
 4.  **Launch**
+
     ```bash
     npm run dev
     ```
+
+    The app will auto-login as a Guest User (Authentication functionality has been removed for ease of access).

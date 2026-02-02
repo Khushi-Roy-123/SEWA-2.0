@@ -32,20 +32,10 @@ const AppContent: React.FC = () => {
     const [extractedRecordText, setExtractedRecordText] = useState('');
     const { user, loading } = useAuth();
   
-    // Redirect to login if not authenticated
+    // Redirect to login if not authenticated - REMOVED for public access
     useEffect(() => {
-        // Simple route protection regex or logic
-        const publicRoutes = ['/login', '/register', '/public-profile'];
-        const isPublic = publicRoutes.some(path => location.pathname.startsWith(path));
-
-        if (!loading && !user && !isPublic) {
-            navigate('/login');
-        }
-        // Redirect to dashboard if authenticated and trying to access login/register
-        if (!loading && user && (location.pathname === '/login' || location.pathname === '/register')) {
-            navigate('/');
-        }
-    }, [user, loading, location, navigate]);
+       // Auth check removed
+    }, []);
     
     // Legacy support: Map hash changes or just rely on router
     // For now, let's map the renderPage logic to Routes in the next step, but strictly 
@@ -59,8 +49,6 @@ const AppContent: React.FC = () => {
         const path = location.pathname;
 
         // Route matching
-        if (path === '/login') return <Login />;
-        if (path === '/register') return <Register />;
         if (path.startsWith('/public-profile')) return <PublicProfile />;
 
         // Protected routes
@@ -81,7 +69,6 @@ const AppContent: React.FC = () => {
             case '/share': return <Layout><ShareProfile /></Layout>;
             case '/':
             default:
-                if (!user) return <Login />;
                 return <Layout><Dashboard /></Layout>;
         }
     };
