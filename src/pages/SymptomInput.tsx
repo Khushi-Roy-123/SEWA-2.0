@@ -1,5 +1,6 @@
 
 import React, { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useTranslations } from '../lib/i18n';
 import { MicrophoneIcon, StethoscopeIcon } from '../components/Icons';
 
@@ -34,12 +35,9 @@ const supportedLanguages = [
   { code: 'ur-IN', name: 'اردو (Urdu)' },
 ];
 
-interface SymptomInputProps {
-  onSubmit: (symptoms: string) => void;
-}
-
-const SymptomInput: React.FC<SymptomInputProps> = ({ onSubmit }) => {
+const SymptomInput: React.FC = () => {
   const { t } = useTranslations();
+  const navigate = useNavigate();
   const [symptoms, setSymptoms] = useState('');
   const [selectedLang, setSelectedLang] = useState('en-IN');
   const [isRecording, setIsRecording] = useState(false);
@@ -102,7 +100,7 @@ const SymptomInput: React.FC<SymptomInputProps> = ({ onSubmit }) => {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!symptoms.trim()) return;
-    onSubmit(symptoms);
+    navigate(`/recommendations?q=${encodeURIComponent(symptoms)}`);
   };
 
   return (

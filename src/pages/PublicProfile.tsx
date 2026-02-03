@@ -2,8 +2,42 @@
 import React from 'react';
 import { HeartbeatIcon, ExclamationIcon, PillIcon, FileTextIcon } from '../components/Icons';
 
+import { useParams } from 'react-router-dom';
+
 const PublicProfile: React.FC = () => {
-    // This page is reached by scanning the QR code
+    const { userId } = useParams<{ userId: string }>();
+    // In a real app, userId would be used to fetch from DB. 
+    // Here we use local storage for the demo.
+    
+    // Default data (fallback)
+    const defaultProfile = {
+        name: 'Alex Doe',
+        dob: 'January 1, 1980',
+        bloodGroup: 'O+',
+        emergencyContact: {
+            name: 'Jane Doe',
+            relationship: 'Spouse',
+            phone: '+1 555-765-4321',
+        },
+        allergies: 'Penicillin, Peanuts', // Stored as string in Profile.tsx
+    };
+
+    let profile = defaultProfile;
+    try {
+        const stored = localStorage.getItem('profile_data');
+        if (stored) {
+            const parsed = JSON.parse(stored);
+            profile = { ...defaultProfile, ...parsed };
+        }
+    } catch (e) {
+        console.error("Failed to load profile", e);
+    }
+
+    // Parse allergies if they are a string
+    const allergyList = typeof profile.allergies === 'string' 
+        ? profile.allergies.split(',').map((s: string) => s.trim()) 
+        : ['None'];
+
     return (
         <div className="max-w-md mx-auto min-h-screen bg-slate-50 p-4 space-y-6">
             <header className="bg-sky-900 rounded-3xl p-6 text-white shadow-xl">
@@ -18,20 +52,21 @@ const PublicProfile: React.FC = () => {
                 <div className="flex gap-4 items-center mb-6">
                     <img src="https://picsum.photos/200" className="w-20 h-20 rounded-2xl border-2 border-sky-400" />
                     <div>
-                        <h1 className="text-2xl font-bold">Alex Doe</h1>
-                        <p className="text-sky-300 text-sm font-medium">DOB: 01 Jan 1980 (44Y)</p>
+                        <h1 className="text-2xl font-bold">{profile.name}</h1>
+                        <p className="text-sky-300 text-sm font-medium">DOB: {profile.dob}</p>
                     </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-2">
                     <div className="bg-sky-800 p-3 rounded-2xl">
                         <p className="text-[10px] font-bold text-sky-400 uppercase tracking-tighter">Blood Type</p>
-                        <p className="text-xl font-black">O Positive</p>
+                        <p className="text-xl font-black">{profile.bloodGroup}</p>
                     </div>
                     <div className="bg-sky-800 p-3 rounded-2xl">
                         <p className="text-[10px] font-bold text-sky-400 uppercase tracking-tighter">Emergency Contact</p>
-                        <p className="text-sm font-bold">Jane Doe</p>
-                        <p className="text-[10px] font-medium">+1 555-765-4321</p>
+                        <p className="text-sm font-bold">{profile.emergencyContact.name}</p>
+                        <p className="text-[10px] font-medium">{profile.emergencyContact.phone}</p>
+                        <p className="text-[10px] opacity-75">({profile.emergencyContact.relationship})</p>
                     </div>
                 </div>
             </header>
@@ -42,12 +77,15 @@ const PublicProfile: React.FC = () => {
                     Critical Alerts
                 </h2>
                 <div className="space-y-3">
-                    <div className="p-4 bg-red-50 border border-red-100 rounded-2xl text-sm text-red-800 font-medium">
-                        Allergic to Penicillin - Extreme Sensitivity
-                    </div>
-                    <div className="p-4 bg-red-50 border border-red-100 rounded-2xl text-sm text-red-800 font-medium">
-                        Peanut Allergy
-                    </div>
+                    {allergyList.length > 0 && allergyList[0] !== '' ? (
+                        allergyList.map((allergy: string, index: number) => (
+                            <div key={index} className="p-4 bg-red-50 border border-red-100 rounded-2xl text-sm text-red-800 font-medium">
+                                Allergy: {allergy}
+                            </div>
+                        ))
+                    ) : (
+                        <p className="text-sm text-slate-500">No known allergies.</p>
+                    )}
                 </div>
             </section>
 

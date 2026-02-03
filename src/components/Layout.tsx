@@ -1,6 +1,6 @@
-
 import React from 'react';
-import { HomeIcon, CalendarIcon, PillIcon, FileTextIcon, UserIcon, StethoscopeIcon, HeartbeatIcon, FaceSmileIcon, CurrencyDollarIcon, ChartBarIcon, QrCodeIcon } from './Icons';
+import { Link, useLocation } from 'react-router-dom';
+import { HomeIcon, CalendarIcon, PillIcon, FileTextIcon, UserIcon, StethoscopeIcon, HeartbeatIcon, FaceSmileIcon, CurrencyDollarIcon, ChartBarIcon, QrCodeIcon, TruckIcon } from './Icons';
 import { useTranslations } from '../lib/i18n';
 import GlobalSearch from './GlobalSearch';
 
@@ -14,29 +14,27 @@ interface NavLinkProps {
 const NavLink: React.FC<NavLinkProps> = ({ href, icon, label, isActive }) => {
   const activeClasses = 'bg-sky-100 text-sky-600';
   const inactiveClasses = 'text-slate-600 hover:bg-slate-100 hover:text-slate-900';
-  const navigate = () => { window.location.hash = href; };
   
   return (
-    <button
-      onClick={navigate}
+    <Link
+      to={href}
       className={`group flex items-center w-full px-4 py-3 text-sm font-medium rounded-lg transition-colors duration-150 text-left ${isActive ? activeClasses : inactiveClasses}`}
     >
       {icon}
       <span className="ml-4">{label}</span>
-    </button>
+    </Link>
   );
 };
 
 const MobileNavLink: React.FC<NavLinkProps> = ({ href, icon, label, isActive }) => {
     const activeClasses = 'text-sky-600';
     const inactiveClasses = 'text-slate-500 hover:text-sky-600';
-    const navigate = () => { window.location.hash = href; };
 
     return (
-        <button onClick={navigate} className={`flex flex-col items-center justify-center space-y-1 w-full ${isActive ? activeClasses : inactiveClasses}`}>
+        <Link to={href} className={`flex flex-col items-center justify-center space-y-1 w-full ${isActive ? activeClasses : inactiveClasses}`}>
             {icon}
             <span className="text-xs">{label}</span>
-        </button>
+        </Link>
     );
 }
 
@@ -45,24 +43,25 @@ interface LayoutProps {
 }
 
 const Layout: React.FC<LayoutProps> = ({ children }) => {
-  const currentHash = window.location.hash || '#/';
+  const location = useLocation();
+  const currentPath = location.pathname;
   const { t } = useTranslations();
 
   const navItems = [
-    { href: '#/', label: t('dashboard'), icon: <HomeIcon /> },
-    { href: '#/analytics', label: t('healthAnalytics'), icon: <ChartBarIcon /> },
-    { href: '#/symptoms', label: t('symptomChecker'), icon: <StethoscopeIcon /> },
-    { href: '#/appointments', label: t('appointments'), icon: <CalendarIcon /> },
-    { href: '#/medications', label: t('medications'), icon: <PillIcon /> },
-    { href: '#/records', label: t('records'), icon: <FileTextIcon /> },
-    { href: '#/vitals', label: t('vitalSigns'), icon: <HeartbeatIcon /> },
-    { href: '#/mental-health', label: t('mentalHealth'), icon: <FaceSmileIcon /> },
-    { href: '#/drug-prices', label: t('drugPrices'), icon: <CurrencyDollarIcon /> },
-    { href: '#/share', label: t('shareProfile'), icon: <QrCodeIcon /> },
+    { href: '/', label: t('dashboard'), icon: <HomeIcon /> },
+    { href: '/analytics', label: t('healthAnalytics'), icon: <ChartBarIcon /> },
+    { href: '/symptoms', label: t('symptomChecker'), icon: <StethoscopeIcon /> },
+    { href: '/appointments', label: t('appointments'), icon: <CalendarIcon /> },
+    { href: '/medications', label: t('medications'), icon: <PillIcon /> },
+    { href: '/records', label: t('records'), icon: <FileTextIcon /> },
+    { href: '/mental-health', label: t('mentalHealth'), icon: <FaceSmileIcon /> },
+    { href: '/emergency-services', label: 'Emergency Services', icon: <TruckIcon /> },
+    { href: '/drug-prices', label: t('drugPrices'), icon: <CurrencyDollarIcon /> },
+    { href: '/share', label: t('shareProfile'), icon: <QrCodeIcon /> },
   ];
   
-  const bottomNavItems = [ ...navItems.slice(0, 4), { href: '#/profile', label: t('profile'), icon: <UserIcon /> } ];
-  const desktopNavItems = [ ...navItems, { href: '#/profile', label: t('profile'), icon: <UserIcon /> } ];
+  const bottomNavItems = [ ...navItems.slice(0, 4), { href: '/profile', label: t('profile'), icon: <UserIcon /> } ];
+  const desktopNavItems = [ ...navItems, { href: '/profile', label: t('profile'), icon: <UserIcon /> } ];
 
 
   return (
@@ -78,7 +77,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
           </div>
           <nav className="mt-8 flex-1 px-4 space-y-2">
             {desktopNavItems.map(item => (
-              <NavLink key={item.href} {...item} isActive={currentHash === item.href} />
+              <NavLink key={item.href} {...item} isActive={currentPath === item.href} />
             ))}
           </nav>
         </div>
@@ -103,7 +102,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
       <nav className="md:hidden fixed bottom-0 inset-x-0 bg-white border-t border-slate-200 shadow-lg z-10">
         <div className="flex justify-around h-16 items-center overflow-x-auto">
             {bottomNavItems.map(item => (
-                <MobileNavLink key={item.href} {...item} isActive={currentHash === item.href} />
+                <MobileNavLink key={item.href} {...item} isActive={currentPath === item.href} />
             ))}
         </div>
       </nav>

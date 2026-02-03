@@ -1,19 +1,13 @@
-
 import React, { useState, useEffect, useRef } from 'react';
+import QRCode from 'qrcode';
 import { useTranslations } from '../lib/i18n';
-import { QrCodeIcon, UserIcon, HeartbeatIcon } from '../components/Icons';
-
-declare global {
-    interface Window {
-        QRCode: any;
-    }
-}
+import { QrCodeIcon, HeartbeatIcon } from '../components/Icons';
 
 const ShareProfile: React.FC = () => {
     const { t } = useTranslations();
     const [qrGenerated, setQrGenerated] = useState(false);
     const [profile, setProfile] = useState<any>(null);
-    const qrRef = useRef<HTMLDivElement>(null);
+    const canvasRef = useRef<HTMLCanvasElement>(null);
 
     useEffect(() => {
         const stored = localStorage.getItem('profile_data');
@@ -21,32 +15,25 @@ const ShareProfile: React.FC = () => {
         else setProfile({ name: 'Alex Doe', bloodGroup: 'O+', allergies: 'Penicillin, Peanuts' });
     }, []);
 
-    const generateQRCode = () => {
+    const generateQRCode = async () => {
         setQrGenerated(true);
-        // Wait for DOM to render the ref
-        setTimeout(() => {
-            if (qrRef.current) {
-                qrRef.current.innerHTML = "";
-                // Create a canvas element for node-qrcode
-                const canvas = document.createElement('canvas');
-                qrRef.current.appendChild(canvas);
+        // Wait for render
+        setTimeout(async () => {
+            if (canvasRef.current) {
+                const shareUrl = `${window.location.origin}/public-profile/user-123`; // user-123 is a placeholder ID
                 
-                // Generate a "Public" URL. 
-                const shareUrl = `${window.location.origin}${window.location.pathname}#/public-profile?user=alex`;
-                
-                // Use the node-qrcode (soldair) API as defined in index.html
-                if (window.QRCode && window.QRCode.toCanvas) {
-                    window.QRCode.toCanvas(canvas, shareUrl, {
+                try {
+                    await QRCode.toCanvas(canvasRef.current, shareUrl, {
                         width: 256,
                         margin: 2,
                         color: {
-                            dark: "#0c4a6e", // sky-900
+                            dark: "#0c4a6e",
                             light: "#ffffff"
                         },
                         errorCorrectionLevel: 'H'
-                    }, (error: any) => {
-                        if (error) console.error('QR Generation Error:', error);
                     });
+                } catch (err) {
+                    console.error("QR Gen Error", err);
                 }
             }
         }, 100);
@@ -117,7 +104,7 @@ const ShareProfile: React.FC = () => {
                     ) : (
                         <div className="space-y-6 animate-in fade-in zoom-in duration-500">
                             <div className="p-4 bg-white border-8 border-sky-50 rounded-3xl shadow-inner">
-                                <div ref={qrRef} className="p-2"></div>
+                                <canvas ref={canvasRef}></canvas>
                             </div>
                             <p className="text-slate-800 font-bold text-lg">{t('scanMe')}</p>
                             <p className="text-sm text-slate-400 max-w-xs">Scan this code with any mobile device to access the verified patient summary immediately.</p>

@@ -47,7 +47,6 @@ const Dashboard: React.FC = () => {
     const { t } = useTranslations();
     const [nextMed, setNextMed] = useState<any>(null);
     const [healthScore, setHealthScore] = useState<number | null>(null);
-    const [lastVital, setLastVital] = useState<number | null>(null);
     const [trendData, setTrendData] = useState<any[]>([]);
     const [aiInsights, setAiInsights] = useState<string[]>([]);
     const [userName, setUserName] = useState('Alex');
@@ -66,12 +65,7 @@ const Dashboard: React.FC = () => {
             setAiInsights(data.recommendations?.slice(0, 2) || []);
         }
 
-        // Load Vitals (Mock or Last)
-        const storedVitals = localStorage.getItem('vitals_history');
-        if (storedVitals) {
-            const v = JSON.parse(storedVitals);
-            if (v.length > 0) setLastVital(v[v.length - 1].hr);
-        }
+
 
         // Load Medications
         const storedMeds = localStorage.getItem('medications');
@@ -122,13 +116,7 @@ const Dashboard: React.FC = () => {
                     icon={<ChartBarIcon />} 
                     color="bg-sky-100 text-sky-600" 
                 />
-                <StatCard 
-                    label="Heart Rate" 
-                    value={lastVital || '72'} 
-                    unit="BPM" 
-                    icon={<HeartbeatIcon />} 
-                    color="bg-rose-100 text-rose-600" 
-                />
+
                 <StatCard 
                     label="Today's Mood" 
                     value="Good" 
@@ -220,13 +208,7 @@ const Dashboard: React.FC = () => {
                                 <div className="bg-sky-500 p-2 rounded-xl"><UploadIcon /></div>
                                 Upload Record
                             </button>
-                            <button 
-                                onClick={() => window.location.hash = '#/vitals'}
-                                className="w-full flex items-center gap-3 bg-sky-800/50 hover:bg-sky-800 p-3 rounded-2xl transition-colors text-sm font-bold"
-                            >
-                                <div className="bg-sky-500 p-2 rounded-xl"><HeartbeatIcon /></div>
-                                Live Monitor
-                            </button>
+
                         </div>
                     </div>
 

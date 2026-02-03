@@ -1,57 +1,106 @@
-# Sewa - Your AI-Powered Healthcare Companion 🤖
+# Sewa 2.0 - AI-Powered Healthcare Companion 🏥🤖
 
-Sewa is a modern, comprehensive healthcare companion application designed to empower users to manage their health proactively. Built with a clean, responsive interface, Sewa leverages the power of the Google Gemini API to provide intelligent insights, streamline health tracking, and bridge language barriers in medical care.
+Sewa 2.0 is a next-generation healthcare platform designed to bridge the gap between patients and immediate medical assistance. It leverages **Google Gemini AI** for intelligent health insights, **Firebase** for secure data management, and a modern **React + Vite** architecture for seamless performance.
 
-## 🚀 Live Link
-
-[**Access the live application here**](https://your-live-link-here.com) _(Replace with your actual URL)_
-
----
+![Sewa Banner](https://via.placeholder.com/1200x400?text=Sewa+Health+Platform)
 
 ## ✨ Key Features
 
-### 🩺 Core Health Management
-- **Dashboard:** A centralized hub providing an at-a-glance summary of your health, including upcoming appointments, next medication reminders, and quick access to essential tools.
-- **Medication Management:** Add, track, and manage your medications. Set custom reminders and receive timely browser notifications to ensure you never miss a dose.
-- **Appointment Tracking:** Keep a clear record of all your upcoming and past medical appointments.
-- **Profile Management:** Easily manage your personal information and emergency contact details.
+### 🚑 Emergency Response
 
-### 🤖 AI-Powered Intelligence
-- **Symptom Checker:** Describe symptoms via text or multi-language voice input. Receive AI-generated recommendations for relevant medical specialists.
-- **In-Depth Analysis:** Go beyond basic recommendations with a deep analysis of your symptoms, grounded in Google Search, providing potential conditions, severity assessments, and next steps.
-- **AI Document Analysis:**
-  - **Upload & Scan:** Upload medical records from a file or capture them using your device's camera.
-  - **Text Extraction (OCR):** AI automatically extracts all readable text from your document images.
-  - **Translation & Highlighting:** Translate extracted text and see critical information—diagnoses, medications, lab values—automatically highlighted.
-- **Drug Price Comparison:** Search for any medication and get real-time price comparisons between brand-name and generic alternatives, grounded in Google Search.
-- **AI Wellness Companion:** Engage in real-time voice conversations with a supportive AI companion. The companion provides empathetic support and can suggest a guided meditation when it detects stress.
-- **Emergency Alert Generation:** Critical vital readings can trigger an AI-generated, concise emergency alert message for your emergency contact.
+- **One-Tap Ambulance**: Instantly request an ambulance with simulated driver tracking and ETA.
+- **Nearby Hospitals**: Locate nearby hospitals, view wait times, and book emergency slots.
+- **Critical QR Profile**: A generated QR code that emergency responders can scan to access your critical medical info (allergies, blood group, emergency contacts) without unlocking your phone.
 
-### 📊 Advanced Health Tracking
-- **Vital Signs Monitor (Simulated):** A real-time dashboard to monitor key vitals (Heart Rate, Blood Pressure, SpO2). Features historical data charts with zoom capabilities and an emergency alert system.
-- **Mental Wellness Hub:** A dedicated space for mental well-being:
-  - **Mood Tracker:** Log your daily mood and visualize trends over the week.
-  - **Guided Meditation:** Access a quick, 5-minute guided meditation session.
-  - **Personal Journal:** A private space to write down your thoughts and reflections.
+### � AI-Powered Intelligence (Gemini)
 
-### 🌐 UI/UX & Accessibility
-- **Responsive Design:** A seamless experience on both desktop and mobile devices.
-- **Global Search:** Instantly find appointments, medications, and health records.
-- **Multilingual Support:** Switch the entire UI between English and Spanish.
-- **Offline Capability:** Access key information without an internet connection, thanks to a robust service worker.
+- **Symptom Checker**: Describe your symptoms in plain language and get AI-driven recommendations for specialists.
+- **Medical Report OCR**: Upload photos of lab reports; AI extracts the text and highlights critical values.
+- **Mental Health Companion**: A supportive, private AI chat companion for mental wellness check-ins.
+- **Smart Drug Pricing**: Get estimated local prices (in INR) for brand-name vs. generic medicines using AI market knowledge.
+
+### 🩺 Comprehensive Health Management
+
+- **Dashboard**: A unified view of your health score, upcoming appointments, and medications.
+- **Appointments**: Manage doctor visits (interactive mock booking system).
+- **Profile & Settings**: Securely manage your personal and medical details, which sync to your public emergency profile.
 
 ---
 
-## 💻 Tech Stack
+## 🛠️ Tech Stack
 
-- **Frontend Framework:** `React`
-- **Language:** `TypeScript`
-- **AI/ML:** `Google Gemini API` (`@google/genai`)
-- **Styling:** `Tailwind CSS`
-- **Charting:** `Recharts`
-- **Web APIs:**
-  - Web Speech API
-  - Notifications API
-  - WebRTC (getUserMedia)
-- **Offline Support:** `Service Workers`
-- **Module System:** ES Modules with `Import Maps` (no build step required)
+- **Frontend**: [React 18](https://reactjs.org/), [TypeScript](https://www.typescriptlang.org/)
+- **Build Tool**: [Vite](https://vitejs.dev/)
+- **Styling**: [Tailwind CSS](https://tailwindcss.com/)
+- **AI Integration**: [Google Generative AI SDK](https://www.npmjs.com/package/@google/generative-ai) (Gemini 1.5 Flash)
+- **Routing**: [React Router v6](https://reactrouter.com/)
+- **Icons**: [Lucide React](https://lucide.dev/) / Custom SVGs
+
+---
+
+## 🚀 Getting Started
+
+Follow these steps to run the project locally.
+
+### Prerequisites
+
+- Node.js (v18 or higher)
+- npm or yarn
+- A Google Gemini API Key
+
+### Installation
+
+1.  **Clone the repository**
+
+    ```bash
+    git clone https://github.com/yourusername/sewa-2.0.git
+    cd sewa-2.0
+    ```
+
+2.  **Install dependencies**
+
+    ```bash
+    npm install
+    ```
+
+3.  **Configure Environment Variables**
+    Create a `.env` file in the root directory:
+
+    ```env
+    VITE_OPENROUTER_API_KEY=your_gemini_api_key_here
+    ```
+
+4.  **Run the development server**
+    ```bash
+    npm run dev
+    ```
+    Open [http://localhost:5173](http://localhost:5173) in your browser.
+
+---
+
+## 📦 Building for Production
+
+To create a production-ready build:
+
+```bash
+npm run build
+```
+
+This will generate a `dist` folder that you can deploy to platforms like **Vercel**, **Netlify**, or **Firebase Hosting**.
+
+---
+
+## �️ Privacy & Security
+
+- **Local-First Data**: For this MVP version, sensitive data like appointments and profile details are stored in `localStorage` for privacy and ease of demonstration.
+- **Public Profile**: The emergency profile is designed to be public-read-only via QR code for safety.
+
+---
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+---
+
+_Verified by Sewa Health Platform © 2024_

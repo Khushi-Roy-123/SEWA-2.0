@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { GoogleGenAI, Type } from "@google/genai";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 import { useTranslations } from '../lib/i18n';
 
 interface GenericDrug {
@@ -32,31 +32,27 @@ const DrugPrices: React.FC = () => {
         setSources([]);
 
         try {
-            const ai = new GoogleGenAI({ apiKey: process.env.API_KEY as string });
+            const genAI = new GoogleGenerativeAI(import.meta.env.VITE_OPENROUTER_API_KEY || '');
+            const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
-            const prompt = `For the drug "${searchQuery}", provide a typical price in USD for the brand name version and list 2-3 generic alternatives with their names, manufacturers, and typical prices. Use today's search results to get the most current pricing information. Provide the output as a valid JSON object ONLY, with the structure { "brandName": string, "brandPrice": number, "generics": [{ "name": string, "manufacturer": string, "price": number }] }. If the drug is already a generic (like 'Ibuprofen'), treat it as the brand name and find other generic manufacturers. Ensure prices are realistic numbers.`;
+            const prompt = `For the drug "${searchQuery}", provide a typical price in Indian Rupees (INR) for the brand name version and list 2-3 generic alternatives with their names, manufacturers, and typical prices in INR. Use your knowledge to provide realistic estimates for the Indian market. Provide the output as a valid JSON object ONLY, with the structure { "brandName": string, "brandPrice": number, "generics": [{ "name": string, "manufacturer": string, "price": number }] }.`;
 
-            const response = await ai.models.generateContent({
-                model: 'gemini-2.5-flash',
-                contents: prompt,
-                config: {
-                    tools: [{ googleSearch: {} }],
-                },
-            });
+            const result = await model.generateContent(prompt);
+            const response = await result.response;
             
-            const groundingChunks = response.candidates?.[0]?.groundingMetadata?.groundingChunks || [];
-            setSources(groundingChunks.filter(chunk => chunk.web));
-
-            const jsonText = response.text.trim();
-            // Clean the response to ensure it's valid JSON
-            const cleanedJsonText = jsonText.replace(/^```json\s*|```\s*$/g, '');
+            let jsonText = response.text().trim();
+             if (jsonText.startsWith('```json')) {
+                jsonText = jsonText.replace(/^```json/, '').replace(/```$/, '');
+            } else if (jsonText.startsWith('```')) {
+                 jsonText = jsonText.replace(/^```/, '').replace(/```$/, '');
+            }
             
-            const parsedJson = JSON.parse(cleanedJsonText) as DrugPriceData;
+            const parsedJson = JSON.parse(jsonText) as DrugPriceData;
 
             if (parsedJson.brandPrice && parsedJson.generics) {
                 setPriceData(parsedJson);
             } else {
-                throw new Error("Invalid response structure from API.");
+                throw new Error("Invalid response structure.");
             }
 
         } catch (err) {
@@ -82,27 +78,12 @@ const DrugPrices: React.FC = () => {
                                 style={{ width: `${(item.price / maxPrice) * 100}%` }}
                             ></div>
                         </div>
-                        <div className="w-16 text-sm font-semibold text-slate-800 text-right">${item.price.toFixed(2)}</div>
+                        <div className="w-16 text-sm font-semibold text-slate-800 text-right">₹{item.price.toFixed(2)}</div>
                     </div>
                 ))}
             </div>
         );
     };
-    
-    const SourcesDisplay = ({ sources }: { sources: any[] }) => (
-         <div className="bg-slate-50 rounded-xl p-4 mt-6">
-            <h3 className="text-sm font-semibold text-slate-600 mb-2">Sources</h3>
-            <ul className="space-y-1">
-                {sources.map((source, index) => (
-                    <li key={index} className="text-xs">
-                        <a href={source.web.uri} target="_blank" rel="noopener noreferrer" className="text-sky-700 hover:underline truncate">
-                            {source.web.title || source.web.uri}
-                        </a>
-                    </li>
-                ))}
-            </ul>
-        </div>
-    );
 
     return (
         <div className="space-y-8 max-w-4xl mx-auto">
@@ -118,8 +99,7 @@ const DrugPrices: React.FC = () => {
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                         placeholder={t('searchDrugPlaceholder')}
-                        className="flex-grow mt-1 block w-full px-3 py-2 bg-white border border-slate-300 rounded-md text-sm shadow-sm placeholder-slate-400
-                        focus:outline-none focus:ring-1 focus:ring-sky-500 focus:border-sky-500"
+                        className="flex-grow mt-1 block w-full px-3 py-2 bg-white border border-slate-300 rounded-md text-sm shadow-sm placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-sky-500 focus:border-sky-500"
                     />
                     <button
                         type="submit"
@@ -160,16 +140,15 @@ const DrugPrices: React.FC = () => {
                                             <p className="text-sm text-slate-500">{t('manufacturer')}: {generic.manufacturer}</p>
                                         </div>
                                         <div className="flex items-baseline gap-4 mt-2 sm:mt-0">
-                                            <p className="text-lg font-bold text-sky-600">${generic.price.toFixed(2)}</p>
+                                            <p className="text-lg font-bold text-sky-600">₹{generic.price.toFixed(2)}</p>
                                             <p className="text-sm font-medium text-green-600 bg-green-100 px-2 py-1 rounded-md">
-                                                {t('potentialSavings')}: ${(priceData.brandPrice - generic.price).toFixed(2)}
+                                                {t('potentialSavings')}: ₹{(priceData.brandPrice - generic.price).toFixed(2)}
                                             </p>
                                         </div>
                                    </div>
                                </li>
                            ))}
                         </ul>
-                         {sources.length > 0 && <SourcesDisplay sources={sources} />}
                     </div>
                  </div>
             )}
