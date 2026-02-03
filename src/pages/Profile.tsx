@@ -1,32 +1,47 @@
 
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
+import { UserService } from '@/services/userService';
+import { LogOut } from 'lucide-react';
+import { LogIn } from 'lucide-react'; // Removing this since it's unused, assuming you meant LogOut
 
 const Profile: React.FC = () => {
+    const { currentUser, logout } = useAuth();
+    const navigate = useNavigate();
   const [isEditing, setIsEditing] = useState(false);
   const [profileData, setProfileData] = useState({
-      name: 'Alex Doe',
-      email: 'alex.doe@example.com',
-      dob: 'January 1, 1980',
-      phone: '(555) 123-4567',
-      address: '123 Health St, Wellness City',
-      bloodGroup: 'O+',
-      allergies: 'Penicillin, Peanuts',
+      name: currentUser?.displayName || '',
+      email: currentUser?.email || '',
+      dob: '',
+      phone: '',
+      address: '',
+      bloodGroup: '',
+      allergies: '',
       emergencyContact: {
-          name: 'Jane Doe',
-          relationship: 'Spouse',
-          phone: '(555) 765-4321',
+          name: '',
+          relationship: '',
+          phone: '',
       },
   });
   const [formData, setFormData] = useState(profileData);
 
   useEffect(() => {
-    const stored = localStorage.getItem('profile_data');
-    if (stored) {
-        const parsed = JSON.parse(stored);
-        setProfileData(parsed);
-        setFormData(parsed);
-    }
-  }, []);
+    const fetchProfile = async () => {
+        if (currentUser?.uid) {
+            try {
+                const data = await UserService.getUserProfile(currentUser.uid);
+                if (data) {
+                    setProfileData(prev => ({ ...prev, ...data }));
+                    setFormData(prev => ({ ...prev, ...data }));
+                }
+            } catch (error) {
+                console.error("Error fetching profile:", error);
+            }
+        }
+    };
+    fetchProfile();
+  }, [currentUser]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -53,19 +68,35 @@ const Profile: React.FC = () => {
       setIsEditing(false);
   };
 
-  const handleSave = (e: React.FormEvent) => {
+  const handleSave = async (e: React.FormEvent) => {
       e.preventDefault();
       
+      if (!currentUser?.uid) return;
+
       // Check if changes were actually made
       if (JSON.stringify(formData) === JSON.stringify(profileData)) {
           setIsEditing(false);
           return;
       }
 
-      setProfileData(formData);
-      localStorage.setItem('profile_data', JSON.stringify(formData));
-      setIsEditing(false);
-      alert("Profile updated successfully!");
+      try {
+          await UserService.updateUserProfile(currentUser.uid, formData);
+          setProfileData(formData);
+          setIsEditing(false);
+          alert("Profile updated successfully!");
+      } catch (error) {
+          console.error("Error updating profile:", error);
+          alert("Failed to update profile.");
+      }
+  };
+
+  const handleLogout = async () => {
+    try {
+        await logout();
+        navigate('/login');
+    } catch (error) {
+        console.error("Failed to log out", error);
+    }
   };
 
   const inputClasses = "mt-1 block w-full px-3 py-2 bg-white border border-slate-300 rounded-md text-sm shadow-sm placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-sky-500 focus:border-sky-500";
@@ -93,13 +124,13 @@ const Profile: React.FC = () => {
                         <h2 className="text-2xl font-bold text-slate-800">{profileData.name}</h2>
                     )}
                     {isEditing ? (
-                         <input type="email" name="email" value={formData.email} onChange={handleInputChange} className={`${inputClasses} mt-2`} />
+                        <input type="email" name="email" value={formData.email} onChange={handleInputChange} className={`${inputClasses} mt-2`} />
                     ) : (
-                        <p className="text-slate-500">{profileData.email}</p>
+                        <p className="text-slate-500">{profileData.email || 'No email provided'}</p>
                     )}
                 </div>
                  <div className="flex gap-2">
-                    {isEditing ? (
+                    {isEditing && (
                         <>
                             <button type="submit" className="bg-emerald-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-emerald-700 transition-colors shadow-sm flex items-center gap-2">
                                 <span className="w-4 h-4">✓</span> Save Changes
@@ -108,9 +139,16 @@ const Profile: React.FC = () => {
                                 Cancel
                             </button>
                         </>
-                    ) : (
-                         <button type="button" onClick={handleEdit} className="bg-sky-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-sky-700 transition-colors shadow-sm">
-                            Edit Profile
+                    )}
+                    
+                    {!isEditing && (
+                        <button 
+                            type="button" 
+                            onClick={handleLogout} 
+                            className="bg-red-50 text-red-600 font-semibold py-2 px-4 rounded-lg hover:bg-red-100 transition-colors shadow-sm flex items-center gap-2 border border-red-200"
+                        >
+                            <LogOut size={18} />
+                            Log Out
                         </button>
                     )}
                 </div>

@@ -8,7 +8,8 @@ import {
   HeartbeatIcon, 
   ChartBarIcon, 
   FaceSmileIcon,
-  SparklesIcon
+  SparklesIcon,
+  QrCodeIcon
 } from '../components/Icons';
 import { useTranslations } from '../lib/i18n';
 
@@ -43,18 +44,25 @@ const PrimaryCard: React.FC<{ title: string; subtitle: string; icon: React.React
 
 const { LineChart, Line, ResponsiveContainer, YAxis } = (window as any).Recharts || {};
 
+import { useAuth } from '../contexts/AuthContext';
+
 const Dashboard: React.FC = () => {
     const { t } = useTranslations();
+    const { currentUser } = useAuth();
     const [nextMed, setNextMed] = useState<any>(null);
     const [healthScore, setHealthScore] = useState<number | null>(null);
     const [trendData, setTrendData] = useState<any[]>([]);
     const [aiInsights, setAiInsights] = useState<string[]>([]);
-    const [userName, setUserName] = useState('Alex');
+    const [userName, setUserName] = useState(currentUser?.displayName?.split(' ')[0] || 'User');
 
     useEffect(() => {
-        // Load Profile
+        if (currentUser?.displayName) {
+             setUserName(currentUser.displayName.split(' ')[0]);
+        }
+        
+        // Load Profile (Fallback)
         const profile = localStorage.getItem('profile_data');
-        if (profile) setUserName(JSON.parse(profile).name.split(' ')[0]);
+        if (profile && !currentUser?.displayName) setUserName(JSON.parse(profile).name.split(' ')[0]);
 
         // Load Analytics
         const analytics = localStorage.getItem('last_health_analytics');
@@ -65,14 +73,12 @@ const Dashboard: React.FC = () => {
             setAiInsights(data.recommendations?.slice(0, 2) || []);
         }
 
-
-
         // Load Medications
         const storedMeds = localStorage.getItem('medications');
         if (storedMeds) {
             const meds = JSON.parse(storedMeds);
             const now = new Date();
-            let upcoming = [];
+            let upcoming: { name: string; time: string; dateTime: Date }[] = [];
             meds.forEach((m: any) => {
                 if (m.status === 'Active') {
                     m.reminderTimes.forEach((time: string) => {
@@ -87,7 +93,7 @@ const Dashboard: React.FC = () => {
                 setNextMed(upcoming[0]);
             }
         }
-    }, []);
+    }, [currentUser]);
 
     const dateStr = useMemo(() => new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' }), []);
 
@@ -200,6 +206,13 @@ const Dashboard: React.FC = () => {
                             >
                                 <div className="bg-sky-500 p-2 rounded-xl"><StethoscopeIcon /></div>
                                 Check Symptoms
+                            </button>
+                            <button 
+                                onClick={() => window.location.hash = '#/emergency-card'}
+                                className="w-full flex items-center gap-3 bg-sky-800/50 hover:bg-red-500/80 p-3 rounded-2xl transition-colors text-sm font-bold"
+                            >
+                                <div className="bg-white/20 p-2 rounded-xl"><QrCodeIcon /></div>
+                                Emergency ID
                             </button>
                             <button 
                                 onClick={() => window.location.hash = '#/upload-record'}
