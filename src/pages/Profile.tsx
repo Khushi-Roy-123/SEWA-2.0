@@ -142,14 +142,24 @@ const Profile: React.FC = () => {
                     )}
                     
                     {!isEditing && (
-                        <button 
-                            type="button" 
-                            onClick={handleLogout} 
-                            className="bg-red-50 text-red-600 font-semibold py-2 px-4 rounded-lg hover:bg-red-100 transition-colors shadow-sm flex items-center gap-2 border border-red-200"
-                        >
-                            <LogOut size={18} />
-                            Log Out
-                        </button>
+                        <>
+                            <button 
+                                type="button" 
+                                onClick={handleEdit} 
+                                className="bg-sky-50 text-sky-600 font-semibold py-2 px-4 rounded-lg hover:bg-sky-100 transition-colors shadow-sm flex items-center gap-2 border border-sky-200"
+                            >
+                                <span className="text-lg">✎</span>
+                                Edit Profile
+                            </button>
+                            <button 
+                                type="button" 
+                                onClick={handleLogout} 
+                                className="bg-red-50 text-red-600 font-semibold py-2 px-4 rounded-lg hover:bg-red-100 transition-colors shadow-sm flex items-center gap-2 border border-red-200"
+                            >
+                                <LogOut size={18} />
+                                Log Out
+                            </button>
+                        </>
                     )}
                 </div>
             </div>
