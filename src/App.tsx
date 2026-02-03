@@ -21,6 +21,7 @@ import PublicProfile from './pages/PublicProfile';
 import EmergencyServices from './pages/EmergencyServices';
 import { TranslationsProvider } from './lib/i18n';
 import { Loader2 } from 'lucide-react';
+import { SpeedInsights } from "@vercel/speed-insights/react";
 
 const PrivateRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { currentUser, loading } = useAuth();
@@ -79,6 +80,7 @@ const App: React.FC = () => {
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </Router>
+        <SpeedInsights />
       </TranslationsProvider>
     </AuthProvider>
   );
