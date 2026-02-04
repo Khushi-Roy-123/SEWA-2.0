@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { GoogleGenerativeAI } from "@google/generative-ai";
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useTranslations } from '../lib/i18n';
+import { useAuth } from '../context/AuthContext';
+import { RecordService } from '../services/recordService';
 
 interface AnalyzedData {
     translatedText: string;
@@ -20,10 +22,13 @@ const targetLanguages = [
 const TranslatedRecord: React.FC = () => {
     const { t } = useTranslations();
     const location = useLocation();
+    const navigate = useNavigate();
+    const { user } = useAuth();
     const extractedText = location.state?.extractedText || '';
     
     const [analysis, setAnalysis] = useState<AnalyzedData | null>(null);
     const [isLoading, setIsLoading] = useState(true);
+    const [isSaving, setIsSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [targetLanguage, setTargetLanguage] = useState('English');
 
@@ -71,6 +76,35 @@ const TranslatedRecord: React.FC = () => {
         fetchAnalysis();
     }, [extractedText, targetLanguage, t]);
 
+    const handleSave = async () => {
+        if (!user || !analysis) return;
+        
+        const title = window.prompt("Enter a title for this record (e.g. Blood Test Report):");
+        if (!title) return;
+        
+        const doctor = window.prompt("Enter provider/doctor name (optional):") || "Unknown";
+        
+        setIsSaving(true);
+        try {
+            await RecordService.addRecord({
+                userId: user.uid,
+                type: 'report', 
+                title,
+                doctor,
+                date: new Date().toISOString(),
+                extractedText,
+                translatedText: analysis.translatedText,
+                criticalPhrases: analysis.criticalPhrases
+            });
+            navigate('/records');
+        } catch (err) {
+            console.error("Error saving record:", err);
+            alert("Failed to save record.");
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
     const renderHighlightedText = () => {
         if (!analysis) return null;
 
@@ -92,9 +126,20 @@ const TranslatedRecord: React.FC = () => {
 
     return (
         <div className="space-y-8 max-w-4xl mx-auto">
-            <div>
-                <h1 className="text-3xl font-bold text-slate-900">{t('analyzedRecordTitle')}</h1>
-                <p className="mt-1 text-slate-500">{t('analyzedRecordSubtitle')}</p>
+            <div className="flex justify-between items-start">
+                <div>
+                    <h1 className="text-3xl font-bold text-slate-900">{t('analyzedRecordTitle')}</h1>
+                    <p className="mt-1 text-slate-500">{t('analyzedRecordSubtitle')}</p>
+                </div>
+                {user && analysis && !isLoading && (
+                    <button
+                        onClick={handleSave}
+                        disabled={isSaving}
+                        className="bg-sky-600 text-white font-semibold py-2 px-4 rounded-lg shadow-md hover:bg-sky-700 transition-colors disabled:opacity-50"
+                    >
+                        {isSaving ? 'Saving...' : 'Save to Records'}
+                    </button>
+                )}
             </div>
 
             <div className="bg-white rounded-xl shadow-lg p-6 md:p-8 space-y-6">

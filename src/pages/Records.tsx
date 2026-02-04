@@ -1,10 +1,35 @@
 import React, { useState, useEffect } from 'react';
-import { records } from '../lib/data';
+import { useAuth } from '../context/AuthContext';
+import { RecordService, MedicalRecord } from '../services/recordService';
 import { PlusIcon } from '../components/Icons';
 
 const Records: React.FC = () => {
+    const { user } = useAuth();
+    const [records, setRecords] = useState<MedicalRecord[]>([]);
+    const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
-    const [filteredRecords, setFilteredRecords] = useState(records);
+    const [filteredRecords, setFilteredRecords] = useState<MedicalRecord[]>([]);
+
+    useEffect(() => {
+        const fetchRecords = async () => {
+            if (user?.uid) {
+                try {
+                    setLoading(true);
+                    const fetchedRecords = await RecordService.getRecords(user.uid);
+                    setRecords(fetchedRecords);
+                    setFilteredRecords(fetchedRecords);
+                } catch (error) {
+                    console.error("Failed to fetch records:", error);
+                } finally {
+                    setLoading(false);
+                }
+            } else {
+                setLoading(false);
+            }
+        };
+
+        fetchRecords();
+    }, [user]);
 
     useEffect(() => {
         const lowercasedQuery = searchQuery.toLowerCase();
@@ -14,7 +39,15 @@ const Records: React.FC = () => {
             record.doctor.toLowerCase().includes(lowercasedQuery)
         );
         setFilteredRecords(newFilteredRecords);
-    }, [searchQuery]);
+    }, [searchQuery, records]);
+
+    if (loading) {
+        return (
+            <div className="flex justify-center items-center h-64">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-sky-600"></div>
+            </div>
+        );
+    }
 
     return (
         <div className="space-y-6">
@@ -61,14 +94,14 @@ const Records: React.FC = () => {
                         {filteredRecords.length > 0 ? (
                             filteredRecords.map(record => (
                                 <tr key={record.id} className="border-b border-slate-100 last:border-0 hover:bg-slate-50">
-                                    <td className="p-4 text-slate-600 whitespace-nowrap">{record.date}</td>
+                                    <td className="p-4 text-slate-600 whitespace-nowrap">{new Date(record.date).toLocaleDateString()}</td>
                                     <td className="p-4 whitespace-nowrap">
-                                        <span className="bg-sky-100 text-sky-800 text-xs font-medium mr-2 px-2.5 py-0.5 rounded-full">{record.type}</span>
+                                        <span className="bg-sky-100 text-sky-800 text-xs font-medium mr-2 px-2.5 py-0.5 rounded-full capitalize">{record.type}</span>
                                     </td>
                                     <td className="p-4 font-medium text-slate-800">{record.title}</td>
                                     <td className="p-4 text-slate-600">{record.doctor}</td>
                                     <td className="p-4 text-right">
-                                        <a href="#" className="text-sky-600 hover:text-sky-800 font-medium">View</a>
+                                        <button className="text-sky-600 hover:text-sky-800 font-medium">View</button>
                                     </td>
                                 </tr>
                             ))

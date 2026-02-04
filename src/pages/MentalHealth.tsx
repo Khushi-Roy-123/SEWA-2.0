@@ -1,7 +1,6 @@
-import React, { useState, useRef, useEffect, useMemo } from 'react';
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import React, { useState, useEffect, useMemo } from 'react';
 import { useTranslations } from '../lib/i18n';
-import { PlayIcon, PauseIcon, SparklesIcon, BookOpenIcon, PencilIcon, TrashIcon, XIcon, MicrophoneIcon } from '../components/Icons';
+import { BookOpenIcon, PencilIcon, TrashIcon, XIcon } from '../components/Icons';
 
 declare global {
   interface Window {
@@ -97,117 +96,7 @@ const MoodHistoryChart: React.FC<{ moodHistory: MoodEntry[] }> = ({ moodHistory 
     );
 };
 
-const MeditationGuide: React.FC<{ playTrigger: boolean; onPlayComplete: () => void }> = ({ playTrigger, onPlayComplete }) => {
-    const { t } = useTranslations();
-    const [isPlaying, setIsPlaying] = useState(false);
-    const audioRef = useRef<HTMLAudioElement>(null);
-    
-    useEffect(() => {
-        if (playTrigger && audioRef.current) {
-            audioRef.current.play().catch(e => console.error(e)).finally(() => onPlayComplete());
-        }
-    }, [playTrigger, onPlayComplete]);
 
-    const togglePlayPause = () => {
-        if (!audioRef.current) return;
-        if (audioRef.current.paused) {
-            audioRef.current.play().catch(console.error);
-        } else {
-            audioRef.current.pause();
-        }
-    };
-
-    const audioSrc = "https://storage.googleapis.com/aistudio-hosting/samples/meditation.mp3";
-
-    return (
-        <div className="bg-white rounded-xl shadow-lg p-6">
-            <h2 className="text-xl font-bold text-slate-800 text-center">{t('meditationTitle')}</h2>
-            <p className="text-slate-500 mt-2 mb-4 text-center">{t('meditationDesc')}</p>
-            <audio 
-                ref={audioRef} 
-                onPlay={() => setIsPlaying(true)} 
-                onPause={() => setIsPlaying(false)} 
-                onEnded={() => setIsPlaying(false)}
-                preload="auto"
-            >
-                <source src={audioSrc} type="audio/mpeg" />
-            </audio>
-            <div className="flex items-center justify-center">
-                <button
-                    onClick={togglePlayPause}
-                    className="p-3 rounded-full bg-sky-600 text-white hover:bg-sky-700 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-500"
-                > {isPlaying ? <PauseIcon /> : <PlayIcon />} </button>
-            </div>
-        </div>
-    );
-};
-
-const AICompanion: React.FC<{ onSuggestMeditation: () => void }> = ({ onSuggestMeditation }) => {
-    const { t } = useTranslations();
-    const [messages, setMessages] = useState<{role: 'user' | 'model', text: string}[]>([]);
-    const [inputText, setInputText] = useState('');
-    const [isLoading, setIsLoading] = useState(false);
-    
-    const handleSend = async () => {
-        if (!inputText.trim()) return;
-        const text = inputText;
-        setInputText('');
-        setMessages(prev => [...prev, { role: 'user', text }]);
-        setIsLoading(true);
-
-        try {
-            const genAI = new GoogleGenerativeAI(import.meta.env.VITE_OPENROUTER_API_KEY || '');
-            const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-            
-            // Allow the model to suggest meditation
-            if (text.toLowerCase().includes('meditat') || text.toLowerCase().includes('calm')) {
-                onSuggestMeditation();
-            }
-
-            const prompt = `Act as a mental health companion. User says: "${text}". Keep it supportive and brief.`;
-            const result = await model.generateContent(prompt);
-            const response = await result.response;
-            const reply = response.text();
-            
-            setMessages(prev => [...prev, { role: 'model', text: reply }]);
-        } catch (error) {
-            console.error(error);
-            setMessages(prev => [...prev, { role: 'model', text: "I'm having trouble connecting right now." }]);
-        } finally {
-            setIsLoading(false);
-        }
-    };
-
-    return (
-        <div className="bg-white rounded-xl shadow-lg p-6 flex flex-col h-[500px]">
-            <h2 className="text-xl font-bold text-slate-800 text-center flex items-center justify-center gap-2">
-                <SparklesIcon />
-                {t('aiCompanionTitle')}
-            </h2>
-            <div className="flex-grow mt-4 bg-slate-50 rounded-lg p-4 space-y-4 overflow-y-auto">
-                {messages.length === 0 && <p className="text-center text-slate-400">Say hello!</p>}
-                {messages.map((m, i) => (
-                    <div key={i} className={m.role === 'user' ? 'text-right' : 'text-left'}>
-                        <span className={`inline-block px-3 py-2 rounded-lg text-sm ${m.role === 'user' ? 'bg-sky-500 text-white' : 'bg-white border text-slate-800'}`}>
-                            {m.text}
-                        </span>
-                    </div>
-                ))}
-                {isLoading && <div className="text-center text-slate-400 text-sm">Thinking...</div>}
-            </div>
-            <div className="mt-4 flex gap-2">
-                <input 
-                    value={inputText}
-                    onChange={e => setInputText(e.target.value)}
-                    onKeyDown={e => e.key === 'Enter' && handleSend()}
-                    placeholder="Type a message..."
-                    className="flex-grow border p-2 rounded-md"
-                />
-                <button onClick={handleSend} disabled={isLoading} className="bg-sky-600 text-white px-4 rounded-md">Send</button>
-            </div>
-        </div>
-    );
-};
 
 const Journal: React.FC = () => {
     const { t } = useTranslations();
@@ -324,7 +213,6 @@ const Journal: React.FC = () => {
 const MentalHealth: React.FC = () => {
     const { t } = useTranslations();
     const [moodHistory, setMoodHistory] = useState<MoodEntry[]>([]);
-    const [triggerMeditation, setTriggerMeditation] = useState(false);
 
     useEffect(() => {
         try {
@@ -343,22 +231,16 @@ const MentalHealth: React.FC = () => {
     };
 
     return (
-        <div className="space-y-8">
+        <div className="space-y-8 max-w-4xl mx-auto">
             <div>
                 <h1 className="text-3xl font-bold text-slate-900">{t('mentalHealthTitle')}</h1>
                 <p className="mt-1 text-slate-500">{t('mentalHealthSubtitle')}</p>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                <div className="space-y-8">
-                    <MoodTracker onMoodSelect={handleMoodSelect} />
-                    <MoodHistoryChart moodHistory={moodHistory} />
-                    <Journal />
-                </div>
-                <div className="space-y-8">
-                     <MeditationGuide playTrigger={triggerMeditation} onPlayComplete={() => setTriggerMeditation(false)} />
-                     <AICompanion onSuggestMeditation={() => setTriggerMeditation(true)} />
-                </div>
+            <div className="space-y-8">
+                <MoodTracker onMoodSelect={handleMoodSelect} />
+                <MoodHistoryChart moodHistory={moodHistory} />
+                <Journal />
             </div>
         </div>
     );

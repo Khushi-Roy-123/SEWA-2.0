@@ -2,7 +2,7 @@
 
 Sewa 2.0 is a next-generation healthcare platform designed to bridge the gap between patients and immediate medical assistance. It leverages **Google Gemini AI** for intelligent health insights, **Firebase** for secure data management, and a modern **React + Vite** architecture for seamless performance.
 
-![Sewa Banner](https://via.placeholder.com/1200x400?text=Sewa+Health+Platform)
+![Sewa Dashboard Preview](./public/dashboard_preview.png)
 
 ## ✨ Key Features
 
