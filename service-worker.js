@@ -11,11 +11,11 @@ const URLS_TO_CACHE = [
 ];
 
 self.addEventListener('install', (event) => {
+  self.skipWaiting(); // Force the waiting service worker to become the active service worker
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then((cache) => {
         console.log('Opened cache');
-        // Use addAll with a catch to prevent installation failure if one asset is missing
         return cache.addAll(URLS_TO_CACHE).catch(err => {
           console.warn('Could not cache all assets during install:', err);
         });
@@ -24,6 +24,7 @@ self.addEventListener('install', (event) => {
 });
 
 self.addEventListener('activate', (event) => {
+  event.waitUntil(clients.claim()); // Take control of all open clients immediately
   const cacheWhitelist = [CACHE_NAME];
   event.waitUntil(
     caches.keys().then((cacheNames) => {
@@ -39,16 +40,32 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
+  // ONLY intercept GET requests
+  if (event.request.method !== 'GET') {
+    return;
+  }
+
+  const url = event.request.url;
+
+  // Skip ALL API and Firebase traffic
+  if (
+    url.includes('firestore.googleapis.com') || 
+    url.includes('generativelanguage.googleapis.com') ||
+    url.includes('firebase') ||
+    url.includes('google-analytics') ||
+    url.includes('vercel')
+  ) {
+    return;
+  }
+
   event.respondWith(
     caches.match(event.request)
       .then((response) => {
-        // Cache hit - return response
         if (response) {
           return response;
         }
         return fetch(event.request);
-      }
-    )
+      })
   );
 });
 

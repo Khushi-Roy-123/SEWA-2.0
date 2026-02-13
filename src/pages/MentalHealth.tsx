@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { useTranslations } from '../lib/i18n';
+import { useTranslations } from '@/lib/i18n';
 import { BookOpenIcon, PencilIcon, TrashIcon, XIcon } from '../components/Icons';
 
 declare global {
@@ -8,9 +8,6 @@ declare global {
   }
 }
 const { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } = window.Recharts || {};
-
-const MOOD_STORAGE_KEY = 'moodHistory';
-const JOURNAL_STORAGE_KEY = 'journalEntries';
 
 const moods = [
     { name: 'Happy', emoji: '😊' }, { name: 'Good', emoji: '🙂' },
@@ -28,6 +25,10 @@ interface JournalEntry {
     date: string; // ISO string
     content: string;
 }
+
+// Session-based in-memory storage (cleared on refresh)
+let sessionJournalEntries: JournalEntry[] = [];
+let sessionMoodHistory: MoodEntry[] = [];
 
 const MoodTracker: React.FC<{ onMoodSelect: (mood: string) => void }> = ({ onMoodSelect }) => {
     const { t } = useTranslations();
@@ -106,15 +107,12 @@ const Journal: React.FC = () => {
     const [expandedEntries, setExpandedEntries] = useState<Set<string>>(new Set());
     
     useEffect(() => {
-        try {
-            const stored = localStorage.getItem(JOURNAL_STORAGE_KEY);
-            if (stored) setEntries(JSON.parse(stored));
-        } catch (e) { console.error("Failed to parse journal entries", e); }
+        setEntries([...sessionJournalEntries]);
     }, []);
 
     const saveEntries = (updatedEntries: JournalEntry[]) => {
         setEntries(updatedEntries);
-        localStorage.setItem(JOURNAL_STORAGE_KEY, JSON.stringify(updatedEntries));
+        sessionJournalEntries = [...updatedEntries];
     };
 
     const handleSaveEntry = (e: React.FormEvent) => {
@@ -215,10 +213,7 @@ const MentalHealth: React.FC = () => {
     const [moodHistory, setMoodHistory] = useState<MoodEntry[]>([]);
 
     useEffect(() => {
-        try {
-            const stored = localStorage.getItem(MOOD_STORAGE_KEY);
-            if (stored) setMoodHistory(JSON.parse(stored));
-        } catch (e) { console.error("Failed to parse mood history", e); }
+        setMoodHistory([...sessionMoodHistory]);
     }, []);
 
     const handleMoodSelect = (mood: string) => {
@@ -227,7 +222,7 @@ const MentalHealth: React.FC = () => {
         const updatedHistory = moodHistory.filter(h => h.date !== today);
         const newHistory = [...updatedHistory, newEntry];
         setMoodHistory(newHistory);
-        localStorage.setItem(MOOD_STORAGE_KEY, JSON.stringify(newHistory));
+        sessionMoodHistory = [...newHistory];
     };
 
     return (

@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useTranslations } from '../lib/i18n';
+import { useTranslations } from '@/lib/i18n';
 import { MicrophoneIcon, StethoscopeIcon } from '../components/Icons';
 
 interface SpeechRecognition extends EventTarget {

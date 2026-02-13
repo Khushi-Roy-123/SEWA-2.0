@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { useSearchParams } from 'react-router-dom';
-import { useTranslations } from '../lib/i18n';
+import { useTranslations } from '@/lib/i18n';
 import { CardiologyIcon, NeurologyIcon, DermatologyIcon, GastroenterologyIcon, DefaultSpecialistIcon, SpeakerIcon, ExclamationIcon } from '../components/Icons';
 
 interface Recommendation {
@@ -58,8 +58,8 @@ const Recommendations: React.FC = () => {
             setError(null);
 
             try {
-                const genAI = new GoogleGenerativeAI(import.meta.env.VITE_OPENROUTER_API_KEY || '');
-                const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+                const genAI = new GoogleGenerativeAI(import.meta.env.VITE_GEMINI_API_KEY || '');
+                const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
                 
                 const prompt = `Based on the following symptoms, recommend up to 3 relevant medical specialists. For each specialist, provide a brief, user-friendly reason for the recommendation and list 2-3 sample doctor names. Symptoms: "${symptoms}". Output only valid JSON with a "recommendations" array containing objects with "specialty", "reason", and "sampleDoctors" (array of strings). Do NOT use markdown code blocks.`;
 
@@ -98,8 +98,8 @@ const Recommendations: React.FC = () => {
         setError(null);
 
         try {
-            const genAI = new GoogleGenerativeAI(import.meta.env.VITE_OPENROUTER_API_KEY || '');
-            const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+            const genAI = new GoogleGenerativeAI(import.meta.env.VITE_GEMINI_API_KEY || '');
+            const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
             const prompt = `Based on these symptoms: "${symptoms}", conduct a deep analysis. Provide a JSON object with:
             1. 'severityAssessment': { level: 'Urgent'|'Routine'|'Monitor', reason: string }
@@ -196,18 +196,106 @@ const Recommendations: React.FC = () => {
             )}
             
             {deepAnalysis && (
-                <div className="bg-white p-6 rounded-xl shadow-lg mt-8">
-                    <h2 className="text-2xl font-bold mb-4">Deep Analysis</h2>
-                    <div className="mb-4">
-                        <span className="font-bold">Severity:</span> {deepAnalysis.severityAssessment.level} - {deepAnalysis.severityAssessment.reason}
+                <div className="bg-white rounded-3xl shadow-xl overflow-hidden mt-12 animate-in fade-in slide-in-from-bottom-8 duration-500 border border-slate-100">
+                    <div className="bg-slate-900 p-8 text-white">
+                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+                            <div className="flex items-center gap-4">
+                                <div className={`p-4 rounded-2xl shadow-lg ${
+                                    deepAnalysis.severityAssessment.level === 'Urgent' ? 'bg-red-500' : 
+                                    deepAnalysis.severityAssessment.level === 'Routine' ? 'bg-sky-500' : 'bg-amber-500'
+                                }`}>
+                                    <ExclamationIcon />
+                                </div>
+                                <div>
+                                    <h2 className="text-2xl font-black tracking-tight uppercase italic">Deep Health Analysis</h2>
+                                    <p className="text-slate-400 text-xs font-bold uppercase tracking-[0.2em] mt-1">Sewa Advanced Diagnostics</p>
+                                </div>
+                            </div>
+                            <div className="bg-white/10 px-6 py-3 rounded-2xl backdrop-blur-md border border-white/10">
+                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Severity Level</p>
+                                <p className={`text-xl font-black uppercase tracking-tighter ${
+                                    deepAnalysis.severityAssessment.level === 'Urgent' ? 'text-red-400' : 
+                                    deepAnalysis.severityAssessment.level === 'Routine' ? 'text-sky-400' : 'text-amber-400'
+                                }`}>
+                                    {deepAnalysis.severityAssessment.level}
+                                </p>
+                            </div>
+                        </div>
+                        <p className="mt-8 text-slate-300 text-sm font-medium leading-relaxed max-w-3xl">
+                            {deepAnalysis.severityAssessment.reason}
+                        </p>
                     </div>
-                    <div>
-                        <h3 className="font-bold">Potential Conditions:</h3>
-                        <ul>
-                            {deepAnalysis.potentialConditions.map((c, i) => (
-                                <li key={i}><b>{c.name}</b> ({c.likelihood}): {c.description}</li>
-                            ))}
-                        </ul>
+
+                    <div className="p-8 grid grid-cols-1 lg:grid-cols-2 gap-8">
+                        {/* Potential Conditions */}
+                        <div className="space-y-6">
+                            <h3 className="text-xs font-black text-slate-400 uppercase tracking-[0.2em] flex items-center gap-2">
+                                <div className="w-1.5 h-1.5 bg-sky-500 rounded-full"></div>
+                                Potential Conditions
+                            </h3>
+                            <div className="space-y-4">
+                                {deepAnalysis.potentialConditions.map((c, i) => (
+                                    <div key={i} className="bg-slate-50 p-5 rounded-[2rem] border border-slate-100 hover:bg-white hover:shadow-lg transition-all duration-300 group">
+                                        <div className="flex justify-between items-start mb-3">
+                                            <h4 className="font-black text-slate-800 text-lg leading-tight">{c.name}</h4>
+                                            <span className={`text-[10px] font-black px-2 py-1 rounded-lg uppercase tracking-tighter ${
+                                                c.likelihood === 'High' ? 'bg-red-100 text-red-700' : 
+                                                c.likelihood === 'Medium' ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700'
+                                            }`}>
+                                                {c.likelihood} Likelihood
+                                            </span>
+                                        </div>
+                                        <p className="text-xs text-slate-500 font-medium leading-relaxed">{c.description}</p>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* Next Steps & Doctor Questions */}
+                        <div className="space-y-8">
+                            <div className="space-y-6">
+                                <h3 className="text-xs font-black text-slate-400 uppercase tracking-[0.2em] flex items-center gap-2">
+                                    <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full"></div>
+                                    Recommended Next Steps
+                                </h3>
+                                <div className="grid grid-cols-1 gap-2">
+                                    {deepAnalysis.recommendedNextSteps.map((step, i) => (
+                                        <div key={i} className="flex items-center gap-3 p-4 bg-emerald-50/50 rounded-2xl border border-emerald-100/50 text-xs font-bold text-emerald-800">
+                                            <div className="w-5 h-5 bg-emerald-500 text-white rounded-lg flex items-center justify-center text-[10px] font-black shrink-0">{i+1}</div>
+                                            {step}
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+
+                            <div className="space-y-6">
+                                <h3 className="text-xs font-black text-slate-400 uppercase tracking-[0.2em] flex items-center gap-2">
+                                    <div className="w-1.5 h-1.5 bg-orange-500 rounded-full"></div>
+                                    Questions for your Doctor
+                                </h3>
+                                <div className="bg-slate-900 rounded-[2rem] p-6 space-y-4 shadow-xl">
+                                    {deepAnalysis.questionsForDoctor.map((q, i) => (
+                                        <div key={i} className="flex gap-3 text-xs text-slate-300 font-medium leading-relaxed border-b border-white/5 pb-3 last:border-0 last:pb-0">
+                                            <span className="text-sky-500 font-black">?</span>
+                                            {q}
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div className="bg-slate-50 p-6 border-t border-slate-100 flex flex-col md:flex-row items-center justify-between gap-4">
+                        <div className="flex items-center gap-2 text-[10px] font-bold text-slate-400">
+                            <ShieldCheckIcon />
+                            <span>AI-GENERATED ANALYSIS • NOT A MEDICAL DIAGNOSIS</span>
+                        </div>
+                        <button 
+                            onClick={() => window.print()}
+                            className="px-6 py-2 bg-white border border-slate-200 rounded-xl text-xs font-black text-slate-600 hover:bg-slate-100 transition-all shadow-sm"
+                        >
+                            EXPORT REPORT (PDF)
+                        </button>
                     </div>
                 </div>
             )}

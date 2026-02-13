@@ -1,12 +1,10 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { appointments, records } from '../lib/data';
 import { PillIcon, CalendarIcon, FileTextIcon } from './Icons';
-
-interface Medication {
-    id: string;
-    name: string;
-    dosage: string;
-}
+import { MedicationService, Medication } from '../services/medicationService';
+import { AppointmentService, Appointment } from '../services/appointmentService';
+import { RecordService, MedicalRecord } from '../services/recordService';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface SearchResult {
     type: 'Medication' | 'Appointment' | 'Record';
@@ -22,6 +20,7 @@ const typeIcons: { [key in SearchResult['type']]: React.ReactNode } = {
 };
 
 const GlobalSearch: React.FC = () => {
+    const { currentUser } = useAuth();
     const [query, setQuery] = useState('');
     const [results, setResults] = useState<SearchResult[]>([]);
     const [isActive, setIsActive] = useState(false);
@@ -29,17 +28,16 @@ const GlobalSearch: React.FC = () => {
 
     // Debounce search
     useEffect(() => {
-        if (query.length < 2) {
+        if (query.length < 2 || !currentUser) {
             setResults([]);
             return;
         }
 
-        const handler = setTimeout(() => {
+        const handler = setTimeout(async () => {
             const lowerCaseQuery = query.toLowerCase();
             
-            // Search Medications
-            const storedMeds = localStorage.getItem('medications');
-            const meds: Medication[] = storedMeds ? JSON.parse(storedMeds) : [];
+            // Search Session Medications
+            const meds = await MedicationService.getMedications(currentUser.uid);
             const medResults: SearchResult[] = meds
                 .filter(med => med.name.toLowerCase().includes(lowerCaseQuery) || med.dosage.toLowerCase().includes(lowerCaseQuery))
                 .map(med => ({
@@ -49,8 +47,9 @@ const GlobalSearch: React.FC = () => {
                     href: '#/medications'
                 }));
 
-            // Search Appointments
-            const appointmentResults: SearchResult[] = appointments
+            // Search Session Appointments
+            const apts = await AppointmentService.getAppointments(currentUser.uid);
+            const appointmentResults: SearchResult[] = apts
                 .filter(apt => apt.doctor.toLowerCase().includes(lowerCaseQuery) || apt.specialty.toLowerCase().includes(lowerCaseQuery))
                 .map(apt => ({
                     type: 'Appointment',
@@ -59,8 +58,9 @@ const GlobalSearch: React.FC = () => {
                     href: '#/appointments'
                 }));
 
-            // Search Records
-            const recordResults: SearchResult[] = records
+            // Search Session Records
+            const recs = await RecordService.getRecords(currentUser.uid);
+            const recordResults: SearchResult[] = recs
                 .filter(rec => rec.title.toLowerCase().includes(lowerCaseQuery) || rec.type.toLowerCase().includes(lowerCaseQuery) || rec.doctor.toLowerCase().includes(lowerCaseQuery))
                 .map(rec => ({
                     type: 'Record',
@@ -75,7 +75,7 @@ const GlobalSearch: React.FC = () => {
         return () => {
             clearTimeout(handler);
         };
-    }, [query]);
+    }, [query, currentUser]);
 
     // Handle clicks outside to close
     useEffect(() => {
@@ -91,8 +91,6 @@ const GlobalSearch: React.FC = () => {
     }, []);
 
     const groupedResults = useMemo(() => {
-        // FIX: The `if` condition created a union type for `groupedResults`, causing `Object.entries` to infer `unknown` for values.
-        // `reduce` correctly handles an empty array by returning the initial value, so the `if` is not needed.
         return results.reduce((acc, result) => {
             (acc[result.type] = acc[result.type] || []).push(result);
             return acc;
@@ -116,7 +114,7 @@ const GlobalSearch: React.FC = () => {
                 </div>
                 <input
                     type="text"
-                    placeholder="Search anything..."
+                    placeholder="Search session data..."
                     value={query}
                     onChange={(e) => setQuery(e.target.value)}
                     onFocus={() => setIsActive(true)}
@@ -147,7 +145,7 @@ const GlobalSearch: React.FC = () => {
                             ))}
                         </div>
                     ) : (
-                        <p className="p-4 text-sm text-slate-500">No results found for "{query}"</p>
+                        <p className="p-4 text-sm text-slate-500">No session results found for "{query}"</p>
                     )}
                 </div>
             )}

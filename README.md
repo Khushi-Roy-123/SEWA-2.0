@@ -32,7 +32,7 @@ Sewa 2.0 is a next-generation healthcare platform designed to bridge the gap bet
 - **Frontend**: [React 18](https://reactjs.org/), [TypeScript](https://www.typescriptlang.org/)
 - **Build Tool**: [Vite](https://vitejs.dev/)
 - **Styling**: [Tailwind CSS](https://tailwindcss.com/)
-- **AI Integration**: [Google Generative AI SDK](https://www.npmjs.com/package/@google/generative-ai) (Gemini 1.5 Flash)
+- **AI Integration**: [Google Generative AI SDK](https://www.npmjs.com/package/@google/generative-ai) (Gemini 2.5 Flash)
 - **Routing**: [React Router v6](https://reactrouter.com/)
 - **Icons**: [Lucide React](https://lucide.dev/) / Custom SVGs
 
@@ -67,7 +67,7 @@ Follow these steps to run the project locally.
     Create a `.env` file in the root directory:
 
     ```env
-    VITE_OPENROUTER_API_KEY=your_gemini_api_key_here
+    VITE_GEMINI_API_KEY=your_gemini_api_key_here
     ```
 
 4.  **Run the development server**
@@ -92,7 +92,7 @@ This will generate a `dist` folder that you can deploy to platforms like **Verce
 
 ## �️ Privacy & Security
 
-- **Local-First Data**: For this MVP version, sensitive data like appointments and profile details are stored in `localStorage` for privacy and ease of demonstration.
+- **Session-Only Data**: For this MVP version, data like appointments and profile details are stored in-memory. This ensures privacy as no data persists once the browser session ends or the page is refreshed.
 - **Public Profile**: The emergency profile is designed to be public-read-only via QR code for safety.
 
 ---

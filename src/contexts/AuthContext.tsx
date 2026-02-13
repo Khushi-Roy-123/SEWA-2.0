@@ -14,7 +14,7 @@ interface AuthContextType {
   currentUser: User | null;
   loading: boolean;
   login: (email: string, password: string) => Promise<void>;
-  signup: (email: string, password: string, name: string) => Promise<void>;
+  signup: (email: string, password: string, name: string, photoURL: string) => Promise<void>;
   logout: () => Promise<void>;
 }
 
@@ -45,17 +45,30 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     await signInWithEmailAndPassword(auth, email, password);
   };
 
-  const signup = async (email: string, password: string, name: string) => {
+  const signup = async (email: string, password: string, name: string, photoURL: string) => {
+    // 1. Create the Auth account first
     const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-    
-    await updateProfile(userCredential.user, {
-      displayName: name
-    });
+    const user = userCredential.user;
 
-    await UserService.createUserProfile(userCredential.user.uid, {
-        email,
-        name
-    });
+    // 2. Attempt to update profile and create Firestore record
+    // We do this in a way that failure here doesn't necessarily "break" the login,
+    // but we want to know if it happened.
+    try {
+      await Promise.all([
+        updateProfile(user, {
+          displayName: name,
+          photoURL: photoURL
+        }).catch(err => console.error("Firebase Auth profile update failed:", err)),
+        
+        UserService.createUserProfile(user.uid, {
+          email,
+          name,
+          photoURL
+        }).catch(err => console.error("Firestore user profile creation failed:", err))
+      ]);
+    } catch (error) {
+      console.error("Signup secondary steps failed:", error);
+    }
   };
 
   const logout = async () => {

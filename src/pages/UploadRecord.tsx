@@ -1,7 +1,7 @@
 import React, { useState, useRef, useCallback } from 'react';
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { useNavigate } from 'react-router-dom';
-import { useTranslations } from '../lib/i18n';
+import { useTranslations } from '@/lib/i18n';
 import { UploadIcon, CameraIcon } from '../components/Icons';
 
 const UploadRecord: React.FC = () => {
@@ -77,8 +77,8 @@ const UploadRecord: React.FC = () => {
         setExtractedText('');
 
         try {
-            const genAI = new GoogleGenerativeAI(import.meta.env.VITE_OPENROUTER_API_KEY || '');
-            const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+            const genAI = new GoogleGenerativeAI(import.meta.env.VITE_GEMINI_API_KEY || '');
+            const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
             
             const base64Data = imageSrc.split(',')[1];
             const mimeType = imageSrc.split(';')[0].split(':')[1];
@@ -89,7 +89,7 @@ const UploadRecord: React.FC = () => {
                     mimeType: mimeType,
                 },
             };
-            const prompt = "Extract all text from this medical report. Ensure the output is clean and readable.";
+            const prompt = "Extract all text from this medical report. Be precise and include all values, dates, and doctor names. Ensure the output is clean and structured.";
 
             const result = await model.generateContent([prompt, imagePart]);
             const response = await result.response;

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { GoogleGenerativeAI } from "@google/generative-ai";
-import { useTranslations } from '../lib/i18n';
+import { useTranslations } from '@/lib/i18n';
 
 interface GenericDrug {
     name: string;
@@ -32,22 +32,18 @@ const DrugPrices: React.FC = () => {
         setSources([]);
 
         try {
-            const genAI = new GoogleGenerativeAI(import.meta.env.VITE_OPENROUTER_API_KEY || '');
-            const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+            const genAI = new GoogleGenerativeAI(import.meta.env.VITE_GEMINI_API_KEY || '');
+            const model = genAI.getGenerativeModel({ 
+                model: "gemini-2.5-flash",
+                generationConfig: { responseMimeType: "application/json" }
+            });
 
             const prompt = `For the drug "${searchQuery}", provide a typical price in Indian Rupees (INR) for the brand name version and list 2-3 generic alternatives with their names, manufacturers, and typical prices in INR. Use your knowledge to provide realistic estimates for the Indian market. Provide the output as a valid JSON object ONLY, with the structure { "brandName": string, "brandPrice": number, "generics": [{ "name": string, "manufacturer": string, "price": number }] }.`;
 
             const result = await model.generateContent(prompt);
             const response = await result.response;
             
-            let jsonText = response.text().trim();
-             if (jsonText.startsWith('```json')) {
-                jsonText = jsonText.replace(/^```json/, '').replace(/```$/, '');
-            } else if (jsonText.startsWith('```')) {
-                 jsonText = jsonText.replace(/^```/, '').replace(/```$/, '');
-            }
-            
-            const parsedJson = JSON.parse(jsonText) as DrugPriceData;
+            const parsedJson = JSON.parse(response.text()) as DrugPriceData;
 
             if (parsedJson.brandPrice && parsedJson.generics) {
                 setPriceData(parsedJson);
