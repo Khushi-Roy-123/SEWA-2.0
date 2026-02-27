@@ -36,7 +36,7 @@ const PrimaryCard: React.FC<{ title: string; subtitle: string; icon: React.React
     </button>
 );
 
-const { LineChart, Line, ResponsiveContainer, YAxis } = (window as any).Recharts || {};
+import { LineChart, Line, ResponsiveContainer, YAxis } from 'recharts';
 
 const Dashboard: React.FC = () => {
     const [face, face_set] = useState();
@@ -206,7 +206,13 @@ const Dashboard: React.FC = () => {
                             </div>
                             {!fitData ? (
                                 <button
-                                    onClick={handleGoogleFitSync}
+                                    onClick={() => {
+                                        if (!import.meta.env.VITE_GOOGLE_CLIENT_ID) {
+                                            alert("VITE_GOOGLE_CLIENT_ID is missing from your .env file. Please create OAuth credentials in Google Cloud Console and add the ID to connect Google Fit.");
+                                            return;
+                                        }
+                                        handleGoogleFitSync();
+                                    }}
                                     className="px-6 py-2 bg-slate-900 text-white font-black rounded-xl text-xs uppercase tracking-widest hover:bg-slate-800 transition-all active:scale-95"
                                 >
                                     Connect Fit

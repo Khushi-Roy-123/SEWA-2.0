@@ -161,7 +161,6 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                     <div className="mx-auto px-4 sm:px-6 lg:px-8">
                         <div className="flex items-center justify-between h-16">
                             <div className="flex-1 max-w-lg flex items-center gap-4">
-                                <GlobalSearch />
                                 {isPreloading && (
                                     <div className="flex items-center gap-2 px-3 py-1 bg-sky-50 rounded-full border border-sky-100 animate-pulse">
                                         <div className="w-1.5 h-1.5 bg-sky-500 rounded-full"></div>
@@ -202,67 +201,69 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                         {children}
                     </div>
                 </main>
-            </div>
+            </div >
 
             {/* Sewa Code Modal */}
-            {isSewaModalOpen && (
-                <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-                    <div className="bg-white rounded-3xl shadow-2xl w-full max-w-sm overflow-hidden animate-in fade-in zoom-in duration-200">
-                        <div className="p-6 bg-sky-600 text-white relative">
-                            {!isVerifying && (
-                                <button onClick={closeSewaModal} className="absolute top-4 right-4 p-1 hover:bg-sky-700 rounded-full transition-colors">
-                                    <XIcon />
-                                </button>
-                            )}
-                            <div className="bg-white/20 w-12 h-12 rounded-2xl flex items-center justify-center mb-4">
-                                <KeyIcon />
-                            </div>
-                            <h2 className="text-xl font-bold">{t('enterSewaCode')}</h2>
-                            <p className="text-sky-100 text-xs mt-1">Access medical records securely using the 6-digit code.</p>
-                        </div>
-                        <form onSubmit={handleSewaCodeSubmit} className="p-8 space-y-4">
-                            <div>
-                                <input
-                                    type="text"
-                                    maxLength={6}
-                                    value={sewaCodeInput}
-                                    onChange={(e) => setSewaCodeInput(e.target.value.toUpperCase())}
-                                    placeholder="E.g. A1B2C3"
-                                    disabled={isVerifying}
-                                    className={`w-full text-center text-3xl font-black tracking-[0.5em] py-4 bg-slate-50 border-2 border-slate-100 rounded-2xl focus:border-sky-500 focus:ring-0 outline-none transition-all placeholder:tracking-normal placeholder:text-sm placeholder:font-medium ${isVerifying ? 'opacity-50 cursor-not-allowed' : ''}`}
-                                    autoFocus
-                                />
-                                {sewaError && <p className="text-red-500 text-center text-xs mt-2 font-bold">{sewaError}</p>}
-                            </div>
-                            <div className="flex flex-col gap-3">
-                                <button
-                                    type="submit"
-                                    disabled={isVerifying || sewaCodeInput.length < 6}
-                                    className="w-full py-4 bg-slate-900 text-white font-bold rounded-2xl hover:bg-slate-800 transition-all active:scale-95 shadow-lg shadow-slate-200 flex items-center justify-center gap-3 disabled:opacity-70"
-                                >
-                                    {isVerifying ? (
-                                        <>
-                                            <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                                            <span>Verifying...</span>
-                                        </>
-                                    ) : (
-                                        t('viewReport')
-                                    )}
-                                </button>
-                                {isVerifying && (
-                                    <button
-                                        type="button"
-                                        onClick={closeSewaModal}
-                                        className="w-full py-2 text-slate-400 font-bold text-xs hover:text-slate-600 transition-colors uppercase tracking-widest"
-                                    >
-                                        Cancel Verification
+            {
+                isSewaModalOpen && (
+                    <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+                        <div className="bg-white rounded-3xl shadow-2xl w-full max-w-sm overflow-hidden animate-in fade-in zoom-in duration-200">
+                            <div className="p-6 bg-sky-600 text-white relative">
+                                {!isVerifying && (
+                                    <button onClick={closeSewaModal} className="absolute top-4 right-4 p-1 hover:bg-sky-700 rounded-full transition-colors">
+                                        <XIcon />
                                     </button>
                                 )}
+                                <div className="bg-white/20 w-12 h-12 rounded-2xl flex items-center justify-center mb-4">
+                                    <KeyIcon />
+                                </div>
+                                <h2 className="text-xl font-bold">{t('enterSewaCode')}</h2>
+                                <p className="text-sky-100 text-xs mt-1">Access medical records securely using the 6-digit code.</p>
                             </div>
-                        </form>
+                            <form onSubmit={handleSewaCodeSubmit} className="p-8 space-y-4">
+                                <div>
+                                    <input
+                                        type="text"
+                                        maxLength={6}
+                                        value={sewaCodeInput}
+                                        onChange={(e) => setSewaCodeInput(e.target.value.toUpperCase())}
+                                        placeholder="E.g. A1B2C3"
+                                        disabled={isVerifying}
+                                        className={`w-full text-center text-3xl font-black tracking-[0.5em] py-4 bg-slate-50 border-2 border-slate-100 rounded-2xl focus:border-sky-500 focus:ring-0 outline-none transition-all placeholder:tracking-normal placeholder:text-sm placeholder:font-medium ${isVerifying ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                        autoFocus
+                                    />
+                                    {sewaError && <p className="text-red-500 text-center text-xs mt-2 font-bold">{sewaError}</p>}
+                                </div>
+                                <div className="flex flex-col gap-3">
+                                    <button
+                                        type="submit"
+                                        disabled={isVerifying || sewaCodeInput.length < 6}
+                                        className="w-full py-4 bg-slate-900 text-white font-bold rounded-2xl hover:bg-slate-800 transition-all active:scale-95 shadow-lg shadow-slate-200 flex items-center justify-center gap-3 disabled:opacity-70"
+                                    >
+                                        {isVerifying ? (
+                                            <>
+                                                <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                                                <span>Verifying...</span>
+                                            </>
+                                        ) : (
+                                            t('viewReport')
+                                        )}
+                                    </button>
+                                    {isVerifying && (
+                                        <button
+                                            type="button"
+                                            onClick={closeSewaModal}
+                                            className="w-full py-2 text-slate-400 font-bold text-xs hover:text-slate-600 transition-colors uppercase tracking-widest"
+                                        >
+                                            Cancel Verification
+                                        </button>
+                                    )}
+                                </div>
+                            </form>
+                        </div>
                     </div>
-                </div>
-            )}
+                )
+            }
 
             {/* Mobile Bottom Navigation */}
             <nav className="md:hidden fixed bottom-0 inset-x-0 bg-white/80 backdrop-blur-md border-t border-slate-200 shadow-lg z-40">
@@ -272,7 +273,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                     ))}
                 </div>
             </nav>
-        </div>
+        </div >
     );
 };
 

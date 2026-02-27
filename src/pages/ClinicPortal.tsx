@@ -3,7 +3,11 @@ import { useAuth } from '@/contexts/AuthContext';
 import { QueueService, QueueEntry } from '../services/queueService';
 import { UserService, UserProfile } from '../services/userService';
 import { RecordService, MedicalRecord } from '../services/recordService';
-import { StethoscopeIcon, UserIcon, ClockIcon, FileTextIcon, CameraIcon, ExclamationIcon, HeartbeatIcon, SparklesIcon } from '../components/Icons';
+import { StethoscopeIcon, UserIcon, ClockIcon, FileTextIcon, HeartbeatIcon, SparklesIcon, XIcon } from '../components/Icons';
+import { Search, QrCode, User, Shield, AlertCircle, Loader2, Plus } from 'lucide-react';
+import FaceCapture from '../components/FaceCapture';
+import { findMatchingUser } from '../lib/faceRecognition';
+import QRScanner from '../components/QRScanner';
 
 const ClinicPortal: React.FC = () => {
     const { currentUser } = useAuth();
@@ -13,7 +17,9 @@ const ClinicPortal: React.FC = () => {
     const [activeQueueEntry, setActiveQueueEntry] = useState<QueueEntry | null>(null);
     const [isLoadingPatient, setIsLoadingPatient] = useState(false);
 
-    // Quick Check-in simulation
+    // Check-in Modal State
+    const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+    const [checkInMethod, setCheckInMethod] = useState<'code' | 'face' | 'qr' | null>(null);
     const [sewaCodeCheckIn, setSewaCodeCheckIn] = useState('');
     const [isCheckingIn, setIsCheckingIn] = useState(false);
     const [checkInError, setCheckInError] = useState('');
@@ -21,7 +27,7 @@ const ClinicPortal: React.FC = () => {
     useEffect(() => {
         if (!currentUser) return;
 
-        // Subscribe to live queue for this "clinic" (the current user acting as a clinic)
+        // Subscribe to live queue for this "clinic"
         const unsubscribe = QueueService.subscribeToLiveQueue(currentUser.uid, (liveQueue) => {
             setQueue(liveQueue);
         });
@@ -29,32 +35,130 @@ const ClinicPortal: React.FC = () => {
         return () => unsubscribe();
     }, [currentUser]);
 
-    const handleSimulatedCheckIn = async (e: React.FormEvent) => {
-        e.preventDefault();
-        setCheckInError('');
-        if (!currentUser || !sewaCodeCheckIn) return;
-
+    const performCheckIn = async (patientUid: string, code: string) => {
         setIsCheckingIn(true);
+        setCheckInError('');
         try {
-            // Find patient by code
-            const patient = await UserService.getUserBySewaCode(sewaCodeCheckIn);
-            if (!patient) throw new Error("Patient not found");
+            const patient = await UserService.getUserProfile(patientUid);
+            if (!patient) throw new Error("Patient not found in SEWA registry.");
 
-            // Add to live queue
             await QueueService.checkInPatient(
-                currentUser.uid,
-                patient.uid,
+                currentUser!.uid,
+                patientUid,
                 patient.name || 'Unknown Patient',
-                sewaCodeCheckIn
+                code
             );
 
+            // Success
+            setIsAddModalOpen(false);
+            setCheckInMethod(null);
             setSewaCodeCheckIn('');
         } catch (err: any) {
-            setCheckInError(err.message || "Check-in failed");
+            setCheckInError(err.message || "Failed to check in patient.");
         } finally {
             setIsCheckingIn(false);
         }
     };
+
+    const handleManualCodeCheckIn = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (sewaCodeCheckIn.length !== 6) return;
+        setIsCheckingIn(true);
+        setCheckInError('');
+        try {
+            const patient = await UserService.getUserBySewaCode(sewaCodeCheckIn);
+            if (!patient) throw new Error("Invalid SEWA Code.");
+            await performCheckIn(patient.uid, sewaCodeCheckIn);
+        } catch (err: any) {
+            setCheckInError(err.message || "Invalid SEWA Code.");
+            setIsCheckingIn(false);
+        }
+    };
+
+    const handleFaceMatch = async (img: string, descriptor: number[]) => {
+        setIsCheckingIn(true);
+        setCheckInError('');
+        try {
+            const biometrics = await UserService.getAllUserBiometrics();
+            const matchUid = findMatchingUser(descriptor, biometrics);
+
+            if (matchUid) {
+                const patient = await UserService.getUserProfile(matchUid);
+                await performCheckIn(matchUid, patient?.sewaCode || 'FACE-ID');
+            } else {
+                setCheckInError("No matching biometric profile found.");
+            }
+        } catch (err) {
+            setCheckInError("Biometric search failed.");
+        } finally {
+            setIsCheckingIn(false);
+        }
+    };
+
+    const handleQRScan = async (decodedText: string) => {
+        setIsCheckingIn(true);
+        setCheckInError('');
+        try {
+            let codeToLookup = decodedText.trim();
+
+            // 1. Try parsing as JSON (e.g. {"sewaCode":"ABC123"})
+            try {
+                const json = JSON.parse(codeToLookup);
+                if (json.sewaCode) codeToLookup = json.sewaCode;
+                else if (json.code) codeToLookup = json.code;
+                else if (json.uid) codeToLookup = json.uid;
+            } catch (e) {
+                // Not JSON – continue
+            }
+
+            // 2. Try parsing as URL (e.g. https://app.com/public-profile/userId123)
+            if (codeToLookup.startsWith('http')) {
+                try {
+                    const url = new URL(codeToLookup);
+                    const parts = url.pathname.split('/').filter(Boolean);
+                    // Look for a public-profile/{uid} pattern
+                    const profileIdx = parts.indexOf('public-profile');
+                    if (profileIdx !== -1 && parts[profileIdx + 1]) {
+                        const uid = parts[profileIdx + 1];
+                        const patient = await UserService.getUserProfile(uid);
+                        if (patient) {
+                            await performCheckIn(uid, patient.sewaCode || uid);
+                            return;
+                        }
+                    }
+                    // Otherwise use the last path segment as a code
+                    codeToLookup = parts[parts.length - 1] || codeToLookup;
+                } catch (e) {
+                    // Not a valid URL – continue with raw text
+                }
+            }
+
+            // 3. Try direct SEWA code lookup (any length)
+            const upperCode = codeToLookup.toUpperCase();
+            const patient = await UserService.getUserBySewaCode(upperCode);
+            if (patient) {
+                await performCheckIn(patient.uid, upperCode);
+                return;
+            }
+
+            // 4. Try as a 6-char substring if longer
+            if (codeToLookup.length > 6) {
+                const shortCode = codeToLookup.substring(0, 6).toUpperCase();
+                const shortPatient = await UserService.getUserBySewaCode(shortCode);
+                if (shortPatient) {
+                    await performCheckIn(shortPatient.uid, shortCode);
+                    return;
+                }
+            }
+
+            setCheckInError(`QR code scanned: "${codeToLookup}" — No matching patient found in database.`);
+        } catch (err) {
+            setCheckInError("QR Scan failed. Please try again.");
+        } finally {
+            setIsCheckingIn(false);
+        }
+    };
+
 
     const handleSelectPatient = async (entry: QueueEntry) => {
         setActiveQueueEntry(entry);
@@ -102,7 +206,7 @@ const ClinicPortal: React.FC = () => {
     };
 
     return (
-        <div className="flex flex-col h-[calc(100vh-5rem)] max-w-7xl mx-auto -m-6 sm:-m-8">
+        <div className="flex flex-col h-screen bg-slate-100">
             {/* Header Area */}
             <div className="bg-white px-6 py-4 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4 z-10 shrink-0">
                 <div>
@@ -113,24 +217,13 @@ const ClinicPortal: React.FC = () => {
                     <p className="text-sm font-medium text-slate-500 mt-1">Real-time queue management & instant record access.</p>
                 </div>
 
-                {/* Patient Check-in Simulation */}
-                <form onSubmit={handleSimulatedCheckIn} className="flex items-center gap-2">
-                    <input
-                        type="text"
-                        placeholder="Scan SEWA Code (e.g. A1B2)"
-                        value={sewaCodeCheckIn}
-                        maxLength={6}
-                        onChange={e => setSewaCodeCheckIn(e.target.value.toUpperCase())}
-                        className="px-4 py-2 border-2 border-slate-200 rounded-xl text-sm font-bold placeholder:font-medium focus:border-sky-500 focus:ring-0 outline-none w-48 sm:w-64"
-                    />
-                    <button
-                        type="submit"
-                        disabled={isCheckingIn || !sewaCodeCheckIn}
-                        className="px-4 py-2 bg-slate-900 text-white rounded-xl font-bold text-sm hover:bg-slate-800 disabled:opacity-50 transition-colors"
-                    >
-                        Check-in
-                    </button>
-                </form>
+                <button
+                    onClick={() => { setIsAddModalOpen(true); setCheckInMethod(null); setCheckInError(''); }}
+                    className="flex items-center gap-2 px-5 py-2.5 bg-slate-900 text-white rounded-xl font-bold text-sm hover:bg-slate-800 transition-colors shadow-md active:scale-95"
+                >
+                    <Plus size={18} />
+                    Check-in Patient
+                </button>
             </div>
 
             {/* Split View Workspace */}
@@ -157,8 +250,8 @@ const ClinicPortal: React.FC = () => {
                                     key={entry.id}
                                     onClick={() => handleSelectPatient(entry)}
                                     className={`w-full text-left p-4 rounded-xl border-2 transition-all ${activeQueueEntry?.id === entry.id
-                                            ? 'border-sky-500 bg-sky-50 shadow-sm'
-                                            : 'border-slate-100 hover:border-slate-300 bg-white'
+                                        ? 'border-sky-500 bg-sky-50 shadow-sm'
+                                        : 'border-slate-100 hover:border-slate-300 bg-white'
                                         }`}
                                 >
                                     <div className="flex justify-between items-start mb-2">
@@ -181,7 +274,7 @@ const ClinicPortal: React.FC = () => {
                 <div className="flex-1 relative overflow-hidden flex flex-col">
                     {!activeQueueEntry ? (
                         <div className="absolute inset-0 flex flex-col items-center justify-center text-slate-400 gap-4">
-                            <UserIcon />
+                            <div className="w-16 h-16"><UserIcon /></div>
                             <p className="font-medium">Select a patient from the queue to start consulting.</p>
                         </div>
                     ) : isLoadingPatient ? (
@@ -193,8 +286,8 @@ const ClinicPortal: React.FC = () => {
                             {/* Patient Header Banner */}
                             <div className="bg-white border-b border-slate-200 p-6 sm:p-8 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6">
                                 <div className="flex items-center gap-5">
-                                    <div className="w-16 h-16 bg-gradient-to-br from-sky-500 to-indigo-600 rounded-2xl flex items-center justify-center text-white text-2xl font-black shadow-lg shadow-sky-200">
-                                        {activePatient.name?.charAt(0) || <UserIcon />}
+                                    <div className="w-16 h-16 bg-gradient-to-br from-sky-500 to-indigo-600 rounded-2xl flex items-center justify-center text-white text-2xl font-black shadow-lg shadow-sky-200 shrink-0">
+                                        {activePatient.name?.charAt(0) || <div className="w-8 h-8"><UserIcon /></div>}
                                     </div>
                                     <div>
                                         <h2 className="text-2xl font-black text-slate-900">{activePatient.name}</h2>
@@ -206,7 +299,7 @@ const ClinicPortal: React.FC = () => {
                                     </div>
                                 </div>
 
-                                <div className="flex gap-2 w-full sm:w-auto">
+                                <div className="flex gap-2 w-full sm:w-auto shrink-0">
                                     {activeQueueEntry.status === 'waiting' ? (
                                         <button
                                             onClick={() => handleUpdateStatus('in-progress')}
@@ -231,7 +324,7 @@ const ClinicPortal: React.FC = () => {
                                     <div className="bg-sky-50 rounded-[2rem] p-6 sm:p-8 border border-sky-100 shadow-inner">
                                         <div className="flex justify-between items-start mb-4">
                                             <h3 className="font-black text-sky-900 uppercase tracking-widest flex items-center gap-2 text-xs">
-                                                <SparklesIcon /> AI Patient Brief
+                                                <div className="w-4 h-4"><SparklesIcon /></div> AI Patient Brief
                                             </h3>
                                             <span className="bg-white text-sky-700 font-black text-xs px-3 py-1 rounded-full shadow-sm">
                                                 Score: {activePatient.lastHealthReport.healthScore}/100
@@ -260,7 +353,7 @@ const ClinicPortal: React.FC = () => {
                                                     ) : record.imageUrl ? (
                                                         <img src={record.imageUrl} alt="Document" className="w-full h-full object-cover" />
                                                     ) : (
-                                                        <FileTextIcon />
+                                                        <div className="w-8 h-8 text-slate-400"><FileTextIcon /></div>
                                                     )}
                                                 </div>
                                                 <div className="flex-1 min-w-0 flex flex-col justify-center">
@@ -294,6 +387,102 @@ const ClinicPortal: React.FC = () => {
                     ) : null}
                 </div>
             </div>
+
+            {/* Injection Modal */}
+            {isAddModalOpen && (
+                <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[60] p-4">
+                    <div className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-2xl overflow-hidden animate-in fade-in zoom-in duration-200 flex flex-col">
+                        <div className="p-6 border-b border-slate-100 flex justify-between items-center">
+                            <h2 className="text-xl font-black text-slate-900">Check-in Patient</h2>
+                            <button onClick={() => { setIsAddModalOpen(false); setCheckInMethod(null); }} className="p-2 text-slate-400 hover:text-slate-800 hover:bg-slate-100 rounded-full transition-colors">
+                                <XIcon />
+                            </button>
+                        </div>
+                        <div className="p-8 pb-10 flex-1 overflow-y-auto">
+
+                            {checkInError && (
+                                <div className="bg-red-50 text-red-700 p-4 rounded-2xl text-sm font-bold flex items-center gap-2 mb-6 border border-red-100">
+                                    <AlertCircle size={18} /> {checkInError}
+                                </div>
+                            )}
+
+                            {isCheckingIn ? (
+                                <div className="flex flex-col items-center justify-center py-12">
+                                    <Loader2 className="w-12 h-12 text-sky-600 animate-spin mb-4" />
+                                    <p className="text-xs font-black text-slate-400 uppercase tracking-[0.2em]">Verifying Patient...</p>
+                                </div>
+                            ) : checkInMethod === 'face' ? (
+                                <div className="max-w-md mx-auto">
+                                    <button onClick={() => setCheckInMethod(null)} className="text-sky-600 text-sm font-bold hover:underline mb-4">&larr; Back to methods</button>
+                                    <FaceCapture
+                                        onCapture={() => { }}
+                                        onCaptureWithDescriptor={handleFaceMatch}
+                                        onCancel={() => setCheckInMethod(null)}
+                                    />
+                                </div>
+                            ) : checkInMethod === 'qr' ? (
+                                <div className="max-w-md mx-auto">
+                                    <button onClick={() => setCheckInMethod(null)} className="text-sky-600 text-sm font-bold hover:underline mb-4">&larr; Back to methods</button>
+                                    <QRScanner onScanSuccess={handleQRScan} onClose={() => setCheckInMethod(null)} />
+                                </div>
+                            ) : checkInMethod === 'code' ? (
+                                <div className="max-w-xs mx-auto text-center py-8">
+                                    <button onClick={() => setCheckInMethod(null)} className="text-sky-600 text-sm font-bold hover:underline mb-8">&larr; Back to methods</button>
+                                    <form onSubmit={handleManualCodeCheckIn} className="space-y-6">
+                                        <input
+                                            type="text"
+                                            maxLength={6}
+                                            value={sewaCodeCheckIn}
+                                            onChange={(e) => setSewaCodeCheckIn(e.target.value.toUpperCase())}
+                                            className="w-full text-4xl font-black tracking-[0.5em] text-center border-b-4 border-sky-100 focus:border-sky-600 outline-none p-4 font-mono uppercase transition-all"
+                                            placeholder="------"
+                                            autoFocus
+                                        />
+                                        <button
+                                            type="submit"
+                                            disabled={sewaCodeCheckIn.length !== 6}
+                                            className="w-full py-4 bg-slate-900 text-white rounded-2xl font-black shadow-xl disabled:opacity-30 transition-all hover:bg-slate-800 active:scale-95"
+                                        >
+                                            VERIFY & ADD
+                                        </button>
+                                    </form>
+                                </div>
+                            ) : (
+                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+                                    <button onClick={() => setCheckInMethod('face')} className="group flex flex-col items-center gap-4 bg-white p-6 rounded-3xl border-2 border-slate-100 hover:border-sky-300 hover:bg-sky-50 shadow-sm transition-all text-center">
+                                        <div className="w-16 h-16 bg-sky-100 text-sky-600 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform">
+                                            <User size={32} />
+                                        </div>
+                                        <div>
+                                            <h3 className="font-bold text-slate-800">Face Scan</h3>
+                                            <p className="text-xs text-slate-500 mt-1">Instant biometric recognition</p>
+                                        </div>
+                                    </button>
+                                    <button onClick={() => setCheckInMethod('qr')} className="group flex flex-col items-center gap-4 bg-white p-6 rounded-3xl border-2 border-slate-100 hover:border-sky-300 hover:bg-sky-50 shadow-sm transition-all text-center">
+                                        <div className="w-16 h-16 bg-sky-100 text-sky-600 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform">
+                                            <QrCode size={32} />
+                                        </div>
+                                        <div>
+                                            <h3 className="font-bold text-slate-800">QR Code</h3>
+                                            <p className="text-xs text-slate-500 mt-1">Scan physical or digital card</p>
+                                        </div>
+                                    </button>
+                                    <button onClick={() => setCheckInMethod('code')} className="group flex flex-col items-center gap-4 bg-white p-6 rounded-3xl border-2 border-slate-100 hover:border-sky-300 hover:bg-sky-50 shadow-sm transition-all text-center">
+                                        <div className="w-16 h-16 bg-sky-100 text-sky-600 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform">
+                                            <Search size={32} />
+                                        </div>
+                                        <div>
+                                            <h3 className="font-bold text-slate-800">Sewa Code</h3>
+                                            <p className="text-xs text-slate-500 mt-1">Manual 6-digit PIN entry</p>
+                                        </div>
+                                    </button>
+                                </div>
+                            )}
+
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

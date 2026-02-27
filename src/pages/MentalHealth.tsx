@@ -2,12 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useTranslations } from '@/lib/i18n';
 import { BookOpenIcon, PencilIcon, TrashIcon, XIcon } from '../components/Icons';
 
-declare global {
-  interface Window {
-    Recharts: any;
-  }
-}
-const { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } = window.Recharts || {};
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
 const moods = [
     { name: 'Happy', emoji: '😊' }, { name: 'Good', emoji: '🙂' },
@@ -105,7 +100,7 @@ const Journal: React.FC = () => {
     const [newEntry, setNewEntry] = useState('');
     const [editingEntry, setEditingEntry] = useState<JournalEntry | null>(null);
     const [expandedEntries, setExpandedEntries] = useState<Set<string>>(new Set());
-    
+
     useEffect(() => {
         setEntries([...sessionJournalEntries]);
     }, []);
@@ -122,13 +117,13 @@ const Journal: React.FC = () => {
         saveEntries([entry, ...entries]);
         setNewEntry('');
     };
-    
+
     const handleDelete = (id: string) => {
         if (window.confirm(t('deleteConfirmation'))) {
             saveEntries(entries.filter(e => e.id !== id));
         }
     };
-    
+
     const handleEditSave = (content: string) => {
         if (!editingEntry) return;
         saveEntries(entries.map(e => e.id === editingEntry.id ? { ...e, content } : e));
@@ -140,19 +135,19 @@ const Journal: React.FC = () => {
         newSet.has(id) ? newSet.delete(id) : newSet.add(id);
         setExpandedEntries(newSet);
     };
-    
+
     const EntryContent: React.FC<{ content: string; id: string }> = ({ content, id }) => {
         const isLong = content.length > 150;
         const isExpanded = expandedEntries.has(id);
         const displayContent = isLong && !isExpanded ? `${content.substring(0, 150)}...` : content;
-        
+
         return (
             <p className="text-slate-600 text-sm whitespace-pre-wrap">
                 {displayContent}
                 {isLong && (
-                     <button onClick={() => toggleExpand(id)} className="text-sky-600 font-semibold ml-2">
+                    <button onClick={() => toggleExpand(id)} className="text-sky-600 font-semibold ml-2">
                         {isExpanded ? t('readLess') : t('readMore')}
-                     </button>
+                    </button>
                 )}
             </p>
         );
@@ -190,8 +185,8 @@ const Journal: React.FC = () => {
                     <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg">
                         <div className="p-6">
                             <div className="flex justify-between items-center mb-4">
-                               <h3 className="text-lg font-bold">{t('editEntry')}</h3>
-                               <button onClick={() => setEditingEntry(null)}><XIcon /></button>
+                                <h3 className="text-lg font-bold">{t('editEntry')}</h3>
+                                <button onClick={() => setEditingEntry(null)}><XIcon /></button>
                             </div>
                             <textarea
                                 defaultValue={editingEntry.content}

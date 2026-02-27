@@ -84,7 +84,7 @@ const AppContent: React.FC = () => {
         <Route path="/mental-health" element={<PrivateRoute><Layout><MentalHealth /></Layout></PrivateRoute>} />
         <Route path="/drug-prices" element={<PrivateRoute><Layout><DrugPrices /></Layout></PrivateRoute>} />
         <Route path="/analytics" element={<PrivateRoute><Layout><Analytics /></Layout></PrivateRoute>} />
-        <Route path="/clinic-portal" element={<PrivateRoute><Layout><ClinicPortal /></Layout></PrivateRoute>} />
+        <Route path="/clinic" element={<PrivateRoute><ClinicPortal /></PrivateRoute>} />
         <Route path="/share" element={<PrivateRoute><Layout><ShareProfile /></Layout></PrivateRoute>} />
         <Route path="/lookup" element={<PrivateRoute><Layout><PatientLookup /></Layout></PrivateRoute>} />
         <Route path="/google-fit-callback" element={<GoogleFitCallback />} />

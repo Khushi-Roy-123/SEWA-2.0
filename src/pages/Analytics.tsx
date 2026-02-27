@@ -7,13 +7,7 @@ import { RecordService } from '../services/recordService';
 import { UserService, UserProfile } from '../services/userService';
 import { ChartBarIcon, SparklesIcon, ShieldCheckIcon } from '../components/Icons';
 
-declare global {
-    interface Window {
-        Recharts: any;
-    }
-}
-
-const { LineChart, Line, ResponsiveContainer, YAxis } = window.Recharts || {};
+import { LineChart, Line, ResponsiveContainer, YAxis } from 'recharts';
 
 const targetLanguages = [
     { code: 'English', name: 'English' },

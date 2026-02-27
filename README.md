@@ -24,6 +24,8 @@ Sewa 2.0 is a next-generation healthcare platform designed to bridge the gap bet
 - **Dashboard**: A unified view of your health score, upcoming appointments, and medications.
 - **Appointments**: Manage doctor visits (interactive mock booking system).
 - **Profile & Settings**: Securely manage your personal and medical details, which sync to your public emergency profile.
+- **Google Fit Integration**: Sync realtime metabolic markers via Google Cloud.
+- **Clinic Portal**: Manage a live digital queue featuring Face ID & QR Code patient check-ins.
 
 ---
 
@@ -68,6 +70,12 @@ Follow these steps to run the project locally.
 
     ```env
     VITE_GEMINI_API_KEY=your_gemini_api_key_here
+    
+    # Required for Google Fit synchronization:
+    # 1. Go to Google Cloud Console
+    # 2. Enable "Fitness API"
+    # 3. Create OAuth 2.0 Web Client Credentials and enter the Client ID here
+    VITE_GOOGLE_CLIENT_ID=your_google_cloud_oauth_client_id
     ```
 
 4.  **Run the development server**
