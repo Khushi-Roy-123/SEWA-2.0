@@ -16,6 +16,9 @@ const Login: React.FC = () => {
   const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(false);
   const [showCamera, setShowCamera] = useState(false);
+  const [signupHeight, setSignupHeight] = useState('');
+  const [signupWeight, setSignupWeight] = useState('');
+  const [signupAge, setSignupAge] = useState('');
 
   const { currentUser, login, signup } = useAuth();
   const { t, language, setLanguage } = useTranslations();
@@ -36,6 +39,11 @@ const Login: React.FC = () => {
       return;
     }
 
+    if (!isLogin && (!signupHeight || !signupWeight || !signupAge)) {
+      setError('Height, Weight, and Age are mandatory for registration.');
+      return;
+    }
+
     if (password.length < 6) {
       setError(t('validation_passwordLength'));
       return;
@@ -53,7 +61,7 @@ const Login: React.FC = () => {
         navigate('/');
       } else {
         console.log("Login: Initiating signup Flow...");
-        await signup(email, password, name, photo!, descriptor!);
+        await signup(email, password, name, photo!, descriptor!, Number(signupHeight), Number(signupWeight), Number(signupAge));
         console.log("Login: Signup Flow complete. Redirecting to Dashboard.");
         navigate('/');
       }
@@ -156,6 +164,44 @@ const Login: React.FC = () => {
                       value={name}
                       onChange={(e) => setName(e.target.value)}
                     />
+                  </div>
+                )}
+
+                {!showCamera && (
+                  <div className="grid grid-cols-3 gap-3">
+                    <div>
+                      <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">Height (cm)</label>
+                      <input
+                        type="number"
+                        required
+                        className="w-full px-4 py-4 bg-slate-50 border-2 border-slate-50 rounded-2xl focus:bg-white focus:border-sky-500 focus:ring-0 outline-none transition-all text-slate-900 font-bold placeholder:text-slate-300 text-center"
+                        placeholder="175"
+                        value={signupHeight}
+                        onChange={(e) => setSignupHeight(e.target.value)}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">Weight (kg)</label>
+                      <input
+                        type="number"
+                        required
+                        className="w-full px-4 py-4 bg-slate-50 border-2 border-slate-50 rounded-2xl focus:bg-white focus:border-sky-500 focus:ring-0 outline-none transition-all text-slate-900 font-bold placeholder:text-slate-300 text-center"
+                        placeholder="70"
+                        value={signupWeight}
+                        onChange={(e) => setSignupWeight(e.target.value)}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">Age</label>
+                      <input
+                        type="number"
+                        required
+                        className="w-full px-4 py-4 bg-slate-50 border-2 border-slate-50 rounded-2xl focus:bg-white focus:border-sky-500 focus:ring-0 outline-none transition-all text-slate-900 font-bold placeholder:text-slate-300 text-center"
+                        placeholder="28"
+                        value={signupAge}
+                        onChange={(e) => setSignupAge(e.target.value)}
+                      />
+                    </div>
                   </div>
                 )}
               </>

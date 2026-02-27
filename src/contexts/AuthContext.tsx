@@ -14,7 +14,7 @@ interface AuthContextType {
   currentUser: User | null;
   loading: boolean;
   login: (email: string, password: string) => Promise<void>;
-  signup: (email: string, password: string, name: string, photoDataUrl: string, faceDescriptor: number[]) => Promise<void>;
+  signup: (email: string, password: string, name: string, photoDataUrl: string, faceDescriptor: number[], height: number, weight: number, age: number) => Promise<void>;
   logout: () => Promise<void>;
 }
 
@@ -45,7 +45,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     await signInWithEmailAndPassword(auth, email, password);
   };
 
-  const signup = async (email: string, password: string, name: string, photoDataUrl: string, faceDescriptor: number[]) => {
+  const signup = async (email: string, password: string, name: string, photoDataUrl: string, faceDescriptor: number[], height: number, weight: number, age: number) => {
     const userCredential = await createUserWithEmailAndPassword(auth, email, password);
     const user = userCredential.user;
 
@@ -55,7 +55,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         email,
         name,
         photoURL: photoDataUrl,
-        faceDescriptor
+        faceDescriptor,
+        height,
+        weight,
+        age
       });
 
       console.log("AuthContext: Signup - Updating Auth profile...");

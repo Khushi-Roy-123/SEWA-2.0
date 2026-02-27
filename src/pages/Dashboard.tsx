@@ -5,6 +5,7 @@ import { useTranslations } from '@/lib/i18n';
 import { useAuth } from '@/contexts/AuthContext';
 import { Appointment } from '../services/appointmentService';
 import { GoogleFitService, FitData } from '../services/googleFitService';
+import { getDailyTargets, getProgressMessage } from '@/lib/healthTargets';
 import { useData } from '@/contexts/DataContext';
 
 // Local Components for Dashboard
@@ -159,37 +160,81 @@ const Dashboard: React.FC = () => {
             </div>
 
             {/* Top Stats Strip */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                <StatCard
-                    label={t('healthAnalytics')}
-                    value={healthScore || '--'}
-                    unit="/100"
-                    icon={<ChartBarIcon />}
-                    color="bg-sky-100 text-sky-600"
-                />
+            {(() => {
+                const hasProfile = userProfile?.height && userProfile?.weight && userProfile?.age;
+                const targets = hasProfile
+                    ? getDailyTargets(userProfile.weight!, userProfile.height!, userProfile.age!, userProfile.gender || 'Male')
+                    : null;
 
-                <StatCard
-                    label={language === 'hi' ? 'दैनिक कदम' : 'Daily Steps'}
-                    value={fitData?.steps || '--'}
-                    unit="Steps"
-                    icon={<div className="text-xl">🏃</div>}
-                    color="bg-orange-100 text-orange-600"
-                />
-                <StatCard
-                    label={t('medications')}
-                    value={activeMedsCount}
-                    unit={language === 'hi' ? 'आइटम' : 'Items'}
-                    icon={<PillIcon />}
-                    color="bg-emerald-100 text-emerald-600"
-                />
-                <StatCard
-                    label="Calories"
-                    value={fitData?.calories || '--'}
-                    unit="kcal"
-                    icon={<div className="text-xl">🔥</div>}
-                    color="bg-rose-100 text-rose-600"
-                />
-            </div>
+                const ProgressRing = ({ value, max, label, unit, emoji, color }: { value: number; max: number; label: string; unit: string; emoji: string; color: string }) => {
+                    const pct = Math.min((value / max) * 100, 100);
+                    const circumference = 2 * Math.PI * 40;
+                    const offset = circumference - (pct / 100) * circumference;
+                    return (
+                        <div className="bg-white p-6 rounded-[2rem] shadow-sm border border-slate-100 flex flex-col items-center gap-3">
+                            <div className="relative w-24 h-24">
+                                <svg className="w-24 h-24 -rotate-90" viewBox="0 0 100 100">
+                                    <circle cx="50" cy="50" r="40" fill="none" stroke="#f1f5f9" strokeWidth="8" />
+                                    <circle cx="50" cy="50" r="40" fill="none" stroke={color} strokeWidth="8"
+                                        strokeDasharray={circumference} strokeDashoffset={offset}
+                                        strokeLinecap="round" className="transition-all duration-1000 ease-out" />
+                                </svg>
+                                <div className="absolute inset-0 flex flex-col items-center justify-center">
+                                    <span className="text-lg">{emoji}</span>
+                                    <span className="text-xs font-black text-slate-700">{Math.round(pct)}%</span>
+                                </div>
+                            </div>
+                            <div className="text-center">
+                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{label}</p>
+                                <p className="text-lg font-black text-slate-800">{value.toLocaleString()} <span className="text-xs text-slate-400 font-bold">{unit}</span></p>
+                                <p className="text-[10px] font-bold text-slate-400">/ {max.toLocaleString()}</p>
+                            </div>
+                        </div>
+                    );
+                };
+
+                return fitData && targets ? (
+                    <>
+                        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                            <ProgressRing value={fitData.steps} max={targets.targetSteps} label="Steps" unit="steps" emoji="🏃" color="#f97316" />
+                            <ProgressRing value={fitData.calories} max={targets.targetCalories} label="Calories" unit="kcal" emoji="🔥" color="#ef4444" />
+                            <ProgressRing value={Math.round(fitData.distance / 1000 * 10) / 10} max={Math.round(targets.targetDistanceMeters / 1000 * 10) / 10} label="Distance" unit="km" emoji="📍" color="#06b6d4" />
+                            <div className="bg-white p-6 rounded-[2rem] shadow-sm border border-slate-100 flex flex-col items-center justify-center gap-2">
+                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">BMI</p>
+                                <p className="text-3xl font-black text-slate-800">{targets.bmi}</p>
+                                <span className={`text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-widest ${targets.bmiCategory === 'Normal' ? 'bg-emerald-100 text-emerald-700' :
+                                        targets.bmiCategory === 'Underweight' ? 'bg-amber-100 text-amber-700' :
+                                            'bg-rose-100 text-rose-700'
+                                    }`}>{targets.bmiCategory}</span>
+                                <p className="text-[10px] font-bold text-slate-400 mt-1">BMR: {targets.bmr} kcal/day</p>
+                            </div>
+                        </div>
+
+                        {/* Motivational strip */}
+                        <div className="bg-gradient-to-r from-sky-50 to-emerald-50 p-5 rounded-[2rem] border border-sky-100 flex flex-wrap gap-4 items-center justify-between">
+                            <div className="flex items-center gap-3">
+                                <span className="text-2xl">💪</span>
+                                <p className="text-sm font-bold text-slate-700">
+                                    {getProgressMessage(fitData.steps, targets.targetSteps, 'steps')}
+                                </p>
+                            </div>
+                            <div className="flex items-center gap-3">
+                                <span className="text-2xl">🔥</span>
+                                <p className="text-sm font-bold text-slate-700">
+                                    {getProgressMessage(fitData.calories, targets.targetCalories, 'kcal')}
+                                </p>
+                            </div>
+                        </div>
+                    </>
+                ) : (
+                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                        <StatCard label={t('healthAnalytics')} value={healthScore || '--'} unit="/100" icon={<ChartBarIcon />} color="bg-sky-100 text-sky-600" />
+                        <StatCard label={language === 'hi' ? 'दैनिक कदम' : 'Daily Steps'} value={fitData?.steps || '--'} unit="Steps" icon={<div className="text-xl">🏃</div>} color="bg-orange-100 text-orange-600" />
+                        <StatCard label={t('medications')} value={activeMedsCount} unit={language === 'hi' ? 'आइटम' : 'Items'} icon={<PillIcon />} color="bg-emerald-100 text-emerald-600" />
+                        <StatCard label="Calories" value={fitData?.calories || '--'} unit="kcal" icon={<div className="text-xl">🔥</div>} color="bg-rose-100 text-rose-600" />
+                    </div>
+                );
+            })()}
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 {/* Main Activities */}
