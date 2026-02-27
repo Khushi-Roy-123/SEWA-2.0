@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-import { useAuth } from './AuthContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { MedicationService, Medication } from '../services/medicationService';
 import { AppointmentService, Appointment } from '../services/appointmentService';
 import { RecordService, MedicalRecord } from '../services/recordService';
@@ -44,20 +44,20 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const isExpired = expiry && new Date().getTime() > parseInt(expiry);
 
     if (token && !isExpired) {
-        setIsFitLoading(true);
-        try {
-            const data = await GoogleFitService.fetchDailyMetrics(token);
-            setFitData(data);
-        } catch (error) {
-            console.error("Error fetching Fit data", error);
-            if (error instanceof Error && error.message.includes('401')) {
-                localStorage.removeItem('google_fit_token');
-            }
-        } finally {
-            setIsFitLoading(false);
+      setIsFitLoading(true);
+      try {
+        const data = await GoogleFitService.fetchDailyMetrics(token);
+        setFitData(data);
+      } catch (error) {
+        console.error("Error fetching Fit data", error);
+        if (error instanceof Error && error.message.includes('401')) {
+          localStorage.removeItem('google_fit_token');
         }
+      } finally {
+        setIsFitLoading(false);
+      }
     } else {
-        setFitData(null);
+      setFitData(null);
     }
   };
 
@@ -80,53 +80,55 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     let recordsLoaded = false;
 
     const checkPreloadingComplete = () => {
-        if (medsLoaded && aptsLoaded && recordsLoaded) {
-            setIsPreloading(false);
-        }
+      if (medsLoaded && aptsLoaded && recordsLoaded) {
+        setIsPreloading(false);
+      }
     };
 
     // Initial fetch of profile and fit data - these are non-blocking for "preloading" 
     // but we still want them as soon as possible
-    UserService.getUserProfile(currentUser.uid).then(profile => {
+    // Real-time subscription for profile updates
+    const unsubProfile = UserService.subscribeToUserProfile(currentUser.uid, (profile) => {
       if (profile) setUserProfile(profile);
     });
-    
+
     refreshFitData();
 
     // Real-time subscriptions for instant updates across the app
     const unsubMeds = MedicationService.subscribeToMedications(currentUser.uid, (data) => {
       setMedications(data);
       if (!medsLoaded) {
-          medsLoaded = true;
-          checkPreloadingComplete();
+        medsLoaded = true;
+        checkPreloadingComplete();
       }
     });
 
     const unsubApts = AppointmentService.subscribeToAppointments(currentUser.uid, (data) => {
       setAppointments(data);
       if (!aptsLoaded) {
-          aptsLoaded = true;
-          checkPreloadingComplete();
+        aptsLoaded = true;
+        checkPreloadingComplete();
       }
     });
 
     const unsubRecords = RecordService.subscribeToRecords(currentUser.uid, (data) => {
       setRecords(data);
       if (!recordsLoaded) {
-          recordsLoaded = true;
-          checkPreloadingComplete();
+        recordsLoaded = true;
+        checkPreloadingComplete();
       }
     });
 
     // Fallback to ensure we don't get stuck in preloading if a subscription fails or is empty
     const preloadingTimeout = setTimeout(() => {
-        setIsPreloading(false);
+      setIsPreloading(false);
     }, 2000); // Max fallback timeout
 
     return () => {
       unsubMeds();
       unsubApts();
       unsubRecords();
+      unsubProfile();
       clearTimeout(preloadingTimeout);
     };
   }, [currentUser]);

@@ -28,8 +28,8 @@ const ShareProfile: React.FC = () => {
         // Wait for render
         setTimeout(async () => {
             if (canvasRef.current) {
-                const shareUrl = `${window.location.origin}/public-profile/${currentUser?.uid}`; 
-                
+                const shareUrl = `${window.location.origin}/public-profile/${currentUser?.uid}`;
+
                 try {
                     await QRCode.toCanvas(canvasRef.current, shareUrl, {
                         width: 256,
@@ -55,12 +55,6 @@ const ShareProfile: React.FC = () => {
         }
     };
 
-    const getAvatarUrl = (gender?: string, name?: string) => {
-        const seed = name || 'User';
-        if (gender === 'Female') return `https://api.dicebear.com/7.x/avataaars/svg?seed=${seed}&gender=female`;
-        if (gender === 'Male') return `https://api.dicebear.com/7.x/avataaars/svg?seed=${seed}&gender=male`;
-        return `https://api.dicebear.com/7.x/avataaars/svg?seed=${seed}`;
-    };
 
     return (
         <div className="max-w-6xl mx-auto space-y-8 pb-12">
@@ -83,7 +77,7 @@ const ShareProfile: React.FC = () => {
                 {profile ? (
                     <div className="lg:col-span-1 bg-sky-900 rounded-[2.5rem] p-8 text-white shadow-2xl relative overflow-hidden h-full">
                         <div className="absolute top-0 right-0 -mr-16 -mt-16 bg-sky-800 rounded-full h-64 w-64 opacity-20"></div>
-                        
+
                         <div className="flex items-center gap-4 mb-8">
                             <div className="bg-sky-500 p-2.5 rounded-2xl shadow-lg">
                                 <HeartbeatIcon />
@@ -96,7 +90,13 @@ const ShareProfile: React.FC = () => {
 
                         <div className="flex gap-6 mb-10">
                             <div className="relative">
-                                <img src={profile.photoURL || getAvatarUrl(profile.gender, profile.name)} alt="Profile" className="w-24 h-24 rounded-3xl border-2 border-sky-400 object-cover bg-sky-800 p-1" />
+                                {profile.photoURL ? (
+                                    <img src={profile.photoURL} alt="Profile" className="w-24 h-24 rounded-3xl border-2 border-sky-400 object-cover bg-sky-800" />
+                                ) : (
+                                    <div className="w-24 h-24 rounded-3xl border-2 border-sky-400 bg-sky-800/50 flex items-center justify-center animate-pulse">
+                                        <div className="w-8 h-8 border-2 border-sky-400 border-t-white rounded-full animate-spin"></div>
+                                    </div>
+                                )}
                                 <div className="absolute -bottom-2 -right-2 bg-emerald-500 p-1.5 rounded-full border-4 border-sky-900 shadow-lg">
                                     <ShieldCheckIcon />
                                 </div>
@@ -127,7 +127,7 @@ const ShareProfile: React.FC = () => {
                                 <span className="text-[10px] font-medium text-sky-300">{t('digitalIndia')}</span>
                             </div>
                             <div className="w-8 h-8 opacity-30 grayscale invert">
-                                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2L4 5v6.09c0 4.97 3.41 9.32 8 10.91 4.59-1.59 8-5.94 8-10.91V5l-8-3z"/></svg>
+                                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2L4 5v6.09c0 4.97 3.41 9.32 8 10.91 4.59-1.59 8-5.94 8-10.91V5l-8-3z" /></svg>
                             </div>
                         </div>
                     </div>
@@ -145,14 +145,14 @@ const ShareProfile: React.FC = () => {
                     </div>
                     <h2 className="text-2xl font-black text-slate-800 mb-2">{t('sewaCode')}</h2>
                     <p className="text-sm text-slate-500 mb-8 max-w-[200px] mx-auto">Share this 6-digit code with your doctor for immediate record access.</p>
-                    
+
                     <div className="w-full bg-sky-50 border-2 border-sky-100 rounded-3xl p-8 mb-6 group relative">
                         {profile?.sewaCode ? (
                             <div className="flex flex-col items-center gap-4">
                                 <span className="text-4xl font-black tracking-[0.3em] text-sky-900 font-mono">
                                     {profile.sewaCode}
                                 </span>
-                                <button 
+                                <button
                                     onClick={copySewaCode}
                                     className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${copied ? 'bg-emerald-100 text-emerald-700' : 'bg-sky-200 text-sky-600 hover:bg-sky-300'}`}
                                 >
@@ -166,7 +166,7 @@ const ShareProfile: React.FC = () => {
                             </div>
                         )}
                     </div>
-                    
+
                     <div className="bg-slate-50 rounded-2xl p-4 w-full border border-slate-100">
                         <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Security Advice</p>
                         <p className="text-[11px] text-slate-500 leading-relaxed font-medium">Codes are unique and only provide view access. Never share with unverified individuals.</p>

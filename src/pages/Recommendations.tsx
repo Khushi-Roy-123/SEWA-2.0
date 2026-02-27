@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { useSearchParams } from 'react-router-dom';
 import { useTranslations } from '@/lib/i18n';
-import { CardiologyIcon, NeurologyIcon, DermatologyIcon, GastroenterologyIcon, DefaultSpecialistIcon, SpeakerIcon, ExclamationIcon } from '../components/Icons';
+import { CardiologyIcon, NeurologyIcon, DermatologyIcon, GastroenterologyIcon, DefaultSpecialistIcon, SpeakerIcon, ExclamationIcon, ShieldCheckIcon } from '../components/Icons';
 
 interface Recommendation {
     specialty: string;
@@ -60,7 +60,7 @@ const Recommendations: React.FC = () => {
             try {
                 const genAI = new GoogleGenerativeAI(import.meta.env.VITE_GEMINI_API_KEY || '');
                 const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
-                
+
                 const prompt = `Based on the following symptoms, recommend up to 3 relevant medical specialists. For each specialist, provide a brief, user-friendly reason for the recommendation and list 2-3 sample doctor names. Symptoms: "${symptoms}". Output only valid JSON with a "recommendations" array containing objects with "specialty", "reason", and "sampleDoctors" (array of strings). Do NOT use markdown code blocks.`;
 
                 const result = await model.generateContent(prompt);
@@ -70,7 +70,7 @@ const Recommendations: React.FC = () => {
                 if (jsonText.startsWith('```json')) {
                     jsonText = jsonText.replace(/^```json/, '').replace(/```$/, '');
                 } else if (jsonText.startsWith('```')) {
-                     jsonText = jsonText.replace(/^```/, '').replace(/```$/, '');
+                    jsonText = jsonText.replace(/^```/, '').replace(/```$/, '');
                 }
 
                 const parsedJson = JSON.parse(jsonText);
@@ -91,7 +91,7 @@ const Recommendations: React.FC = () => {
 
         fetchRecommendations();
     }, [symptoms, t]);
-    
+
     const handleDeepAnalysis = async () => {
         setIsAnalyzing(true);
         setDeepAnalysis(null);
@@ -107,16 +107,16 @@ const Recommendations: React.FC = () => {
             3. 'recommendedNextSteps': Array of strings
             4. 'questionsForDoctor': Array of strings.
             Output ONLY valid JSON. Do not use markdown blocks.`;
-            
+
             const result = await model.generateContent(prompt);
             const response = await result.response;
             let jsonText = response.text().trim();
-             if (jsonText.startsWith('```json')) {
+            if (jsonText.startsWith('```json')) {
                 jsonText = jsonText.replace(/^```json/, '').replace(/```$/, '');
             } else if (jsonText.startsWith('```')) {
-                 jsonText = jsonText.replace(/^```/, '').replace(/```$/, '');
+                jsonText = jsonText.replace(/^```/, '').replace(/```$/, '');
             }
-            
+
             const parsedJson = JSON.parse(jsonText);
             setDeepAnalysis(parsedJson);
 
@@ -127,7 +127,7 @@ const Recommendations: React.FC = () => {
             setIsAnalyzing(false);
         }
     };
-    
+
     const handleTextToSpeech = (text: string) => {
         if (isSpeaking) return;
         setIsSpeaking(text);
@@ -148,7 +148,7 @@ const Recommendations: React.FC = () => {
             </div>
         );
     }
-    
+
     if (error && !isAnalyzing) {
         return <div className="text-red-500 p-4">{error}</div>;
     }
@@ -173,20 +173,20 @@ const Recommendations: React.FC = () => {
                             <div className="flex justify-between items-center">
                                 <h4 className="font-semibold text-slate-600">{t('reasonForRecommendation')}</h4>
                                 <button onClick={() => handleTextToSpeech(rec.reason)} disabled={!!isSpeaking} className="text-slate-500 hover:text-sky-600 disabled:text-slate-300">
-                                     {isSpeaking === rec.reason ? <span className="animate-pulse">🔊</span> : <SpeakerIcon />}
+                                    {isSpeaking === rec.reason ? <span className="animate-pulse">🔊</span> : <SpeakerIcon />}
                                 </button>
                             </div>
                             <p className="text-sm text-slate-500 mt-1">{rec.reason}</p>
-                            
+
                             <h4 className="font-semibold text-slate-600 mt-4">{t('sampleDoctors')}</h4>
-                             <ul className="list-disc list-inside text-sm text-slate-500 mt-1 space-y-1">
+                            <ul className="list-disc list-inside text-sm text-slate-500 mt-1 space-y-1">
                                 {rec.sampleDoctors.map((doctor, i) => <li key={i}>{doctor}</li>)}
                             </ul>
                         </div>
                     </div>
                 ))}
             </div>
-            
+
             {recommendations.length > 0 && !deepAnalysis && (
                 <div className="text-center pt-4">
                     <button onClick={handleDeepAnalysis} disabled={isAnalyzing} className="bg-slate-700 text-white font-semibold py-3 px-6 rounded-lg shadow-md hover:bg-slate-800 transition-colors disabled:bg-slate-400">
@@ -194,16 +194,15 @@ const Recommendations: React.FC = () => {
                     </button>
                 </div>
             )}
-            
+
             {deepAnalysis && (
                 <div className="bg-white rounded-3xl shadow-xl overflow-hidden mt-12 animate-in fade-in slide-in-from-bottom-8 duration-500 border border-slate-100">
                     <div className="bg-slate-900 p-8 text-white">
                         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
                             <div className="flex items-center gap-4">
-                                <div className={`p-4 rounded-2xl shadow-lg ${
-                                    deepAnalysis.severityAssessment.level === 'Urgent' ? 'bg-red-500' : 
+                                <div className={`p-4 rounded-2xl shadow-lg ${deepAnalysis.severityAssessment.level === 'Urgent' ? 'bg-red-500' :
                                     deepAnalysis.severityAssessment.level === 'Routine' ? 'bg-sky-500' : 'bg-amber-500'
-                                }`}>
+                                    }`}>
                                     <ExclamationIcon />
                                 </div>
                                 <div>
@@ -213,10 +212,9 @@ const Recommendations: React.FC = () => {
                             </div>
                             <div className="bg-white/10 px-6 py-3 rounded-2xl backdrop-blur-md border border-white/10">
                                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Severity Level</p>
-                                <p className={`text-xl font-black uppercase tracking-tighter ${
-                                    deepAnalysis.severityAssessment.level === 'Urgent' ? 'text-red-400' : 
+                                <p className={`text-xl font-black uppercase tracking-tighter ${deepAnalysis.severityAssessment.level === 'Urgent' ? 'text-red-400' :
                                     deepAnalysis.severityAssessment.level === 'Routine' ? 'text-sky-400' : 'text-amber-400'
-                                }`}>
+                                    }`}>
                                     {deepAnalysis.severityAssessment.level}
                                 </p>
                             </div>
@@ -238,10 +236,9 @@ const Recommendations: React.FC = () => {
                                     <div key={i} className="bg-slate-50 p-5 rounded-[2rem] border border-slate-100 hover:bg-white hover:shadow-lg transition-all duration-300 group">
                                         <div className="flex justify-between items-start mb-3">
                                             <h4 className="font-black text-slate-800 text-lg leading-tight">{c.name}</h4>
-                                            <span className={`text-[10px] font-black px-2 py-1 rounded-lg uppercase tracking-tighter ${
-                                                c.likelihood === 'High' ? 'bg-red-100 text-red-700' : 
+                                            <span className={`text-[10px] font-black px-2 py-1 rounded-lg uppercase tracking-tighter ${c.likelihood === 'High' ? 'bg-red-100 text-red-700' :
                                                 c.likelihood === 'Medium' ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700'
-                                            }`}>
+                                                }`}>
                                                 {c.likelihood} Likelihood
                                             </span>
                                         </div>
@@ -261,7 +258,7 @@ const Recommendations: React.FC = () => {
                                 <div className="grid grid-cols-1 gap-2">
                                     {deepAnalysis.recommendedNextSteps.map((step, i) => (
                                         <div key={i} className="flex items-center gap-3 p-4 bg-emerald-50/50 rounded-2xl border border-emerald-100/50 text-xs font-bold text-emerald-800">
-                                            <div className="w-5 h-5 bg-emerald-500 text-white rounded-lg flex items-center justify-center text-[10px] font-black shrink-0">{i+1}</div>
+                                            <div className="w-5 h-5 bg-emerald-500 text-white rounded-lg flex items-center justify-center text-[10px] font-black shrink-0">{i + 1}</div>
                                             {step}
                                         </div>
                                     ))}
@@ -284,13 +281,13 @@ const Recommendations: React.FC = () => {
                             </div>
                         </div>
                     </div>
-                    
+
                     <div className="bg-slate-50 p-6 border-t border-slate-100 flex flex-col md:flex-row items-center justify-between gap-4">
                         <div className="flex items-center gap-2 text-[10px] font-bold text-slate-400">
                             <ShieldCheckIcon />
                             <span>AI-GENERATED ANALYSIS • NOT A MEDICAL DIAGNOSIS</span>
                         </div>
-                        <button 
+                        <button
                             onClick={() => window.print()}
                             className="px-6 py-2 bg-white border border-slate-200 rounded-xl text-xs font-black text-slate-600 hover:bg-slate-100 transition-all shadow-sm"
                         >

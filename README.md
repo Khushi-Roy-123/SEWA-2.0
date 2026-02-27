@@ -102,5 +102,4 @@ This will generate a `dist` folder that you can deploy to platforms like **Verce
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ---
-
-_Verified by Sewa Health Platform © 2024_
+Verified by Sewa Health Platform © 2026

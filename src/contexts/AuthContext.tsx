@@ -1,9 +1,9 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { 
-  User, 
-  onAuthStateChanged, 
-  signInWithEmailAndPassword, 
-  createUserWithEmailAndPassword, 
+import {
+  User,
+  onAuthStateChanged,
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
   signOut,
   updateProfile
 } from 'firebase/auth';
@@ -14,7 +14,7 @@ interface AuthContextType {
   currentUser: User | null;
   loading: boolean;
   login: (email: string, password: string) => Promise<void>;
-  signup: (email: string, password: string, name: string, photoURL: string) => Promise<void>;
+  signup: (email: string, password: string, name: string, photoDataUrl: string, faceDescriptor: number[]) => Promise<void>;
   logout: () => Promise<void>;
 }
 
@@ -45,29 +45,29 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     await signInWithEmailAndPassword(auth, email, password);
   };
 
-  const signup = async (email: string, password: string, name: string, photoURL: string) => {
-    // 1. Create the Auth account first
+  const signup = async (email: string, password: string, name: string, photoDataUrl: string, faceDescriptor: number[]) => {
     const userCredential = await createUserWithEmailAndPassword(auth, email, password);
     const user = userCredential.user;
 
-    // 2. Attempt to update profile and create Firestore record
-    // We do this in a way that failure here doesn't necessarily "break" the login,
-    // but we want to know if it happened.
     try {
-      await Promise.all([
-        updateProfile(user, {
-          displayName: name,
-          photoURL: photoURL
-        }).catch(err => console.error("Firebase Auth profile update failed:", err)),
-        
-        UserService.createUserProfile(user.uid, {
-          email,
-          name,
-          photoURL
-        }).catch(err => console.error("Firestore user profile creation failed:", err))
-      ]);
-    } catch (error) {
+      console.log("AuthContext: Signup - Creating Firestore profile...");
+      await UserService.createUserProfile(user.uid, {
+        email,
+        name,
+        photoURL: photoDataUrl,
+        faceDescriptor
+      });
+
+      console.log("AuthContext: Signup - Updating Auth profile...");
+      await updateProfile(user, {
+        displayName: name
+      });
+
+      console.log("AuthContext: Signup - Completed.");
+
+    } catch (error: any) {
       console.error("Signup secondary steps failed:", error);
+      throw error;
     }
   };
 
@@ -85,7 +85,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   return (
     <AuthContext.Provider value={value}>
-      {!loading && children}
+      {children}
     </AuthContext.Provider>
   );
 };

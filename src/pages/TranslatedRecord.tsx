@@ -3,8 +3,10 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useTranslations } from '@/lib/i18n';
 import { useAuth } from '@/contexts/AuthContext';
+import { getAuth } from 'firebase/auth';
 import { RecordService } from '../services/recordService';
 import { UserService } from '../services/userService';
+import { useData } from '@/contexts/DataContext';
 
 interface AnalyzedData {
     translations: { [key: string]: string };
@@ -47,8 +49,10 @@ const TranslatedRecord: React.FC = () => {
     const location = useLocation();
     const navigate = useNavigate();
     const { currentUser } = useAuth();
+    const { userProfile } = useData();
     const extractedText = location.state?.extractedText || '';
-    
+    const imageUrl = location.state?.imageUrl || '';
+
     const [analysis, setAnalysis] = useState<AnalyzedData | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
@@ -68,11 +72,11 @@ const TranslatedRecord: React.FC = () => {
 
             try {
                 const genAI = new GoogleGenerativeAI(import.meta.env.VITE_GEMINI_API_KEY || '');
-                const model = genAI.getGenerativeModel({ 
+                const model = genAI.getGenerativeModel({
                     model: "gemini-2.5-flash",
                     generationConfig: { responseMimeType: "application/json" }
                 });
-                
+
                 const prompt = `Analyze this medical text and provide a detailed report in JSON format.
                 Target Language for translation: ${targetLanguage}.
 
@@ -81,7 +85,7 @@ const TranslatedRecord: React.FC = () => {
                 2. "criticalPhrases": An array of important medical terms or findings found in the text (in English).
                 3. "title": A concise, professional title for this record (in English).
                 4. "doctor": The name of the doctor or healthcare provider, or "Unknown" if not found.
-                5. "summary": A clear, empathetic medical summary in plain English explaining the report's significance.
+                5. "summary": A clear, empathetic medical summary in plain English explaining the report's significance. Mention if the report belongs to "${userProfile?.name || 'the patient'}" based on any names found in the text.
                 6. "bloodGroup": The patient's blood group if mentioned (e.g., "A+", "O-").
                 7. "allergies": Any mentioned allergies or "None" if not found.
 
@@ -90,7 +94,7 @@ const TranslatedRecord: React.FC = () => {
                 const result = await model.generateContent(prompt);
                 const response = await result.response;
                 const jsonText = response.text().trim();
-                
+
                 const parsedJson = JSON.parse(jsonText);
 
                 if (parsedJson.translation && Array.isArray(parsedJson.criticalPhrases)) {
@@ -120,20 +124,30 @@ const TranslatedRecord: React.FC = () => {
 
     const handleSave = async () => {
         if (!currentUser || !analysis) return;
-        
+
+        // Explicit Auth Verification
+        const auth = getAuth();
+        console.log("Auth State Check (Save):", auth.currentUser?.uid);
+        if (!auth.currentUser) {
+            setError("Authentication lost. Please sign in again.");
+            return;
+        }
+
         setIsSaving(true);
         try {
             // Task 1: Save the medical record (await this for confirmation)
             await RecordService.addRecord({
                 userId: currentUser.uid,
-                type: 'report', 
+                patientName: userProfile?.name || 'Unknown Patient',
+                type: 'report',
                 title: analysis.title,
                 doctor: analysis.doctor,
                 date: new Date().toISOString(),
                 extractedText,
                 translatedText: analysis.translations[targetLanguage] || analysis.translations['English'] || '',
                 criticalPhrases: analysis.criticalPhrases,
-                summary: analysis.summary
+                summary: analysis.summary,
+                imageUrl: imageUrl
             });
 
             // Task 2: Update profile if new information is found (background)
@@ -153,7 +167,7 @@ const TranslatedRecord: React.FC = () => {
 
             setSaved(true);
             setIsSaving(false);
-            
+
             // Navigate immediately to records to show the new entry
             navigate('/records');
         } catch (err) {
@@ -172,7 +186,7 @@ const TranslatedRecord: React.FC = () => {
 
         const regex = new RegExp(`(${criticalPhrases.map(p => p.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')})`, 'gi');
         const parts = translatedText.split(regex);
-        
+
         return parts.map((part, index) => {
             const isHighlight = criticalPhrases.some(phrase => phrase.toLowerCase() === part.toLowerCase());
             return isHighlight ? (
@@ -194,9 +208,8 @@ const TranslatedRecord: React.FC = () => {
                     <button
                         onClick={handleSave}
                         disabled={isSaving || saved}
-                        className={`flex items-center gap-2 px-6 py-2 rounded-xl font-black text-sm shadow-lg transition-all active:scale-95 ${
-                            saved ? 'bg-emerald-500 text-white' : 'bg-sky-600 text-white hover:bg-sky-700'
-                        } disabled:opacity-70`}
+                        className={`flex items-center gap-2 px-6 py-2 rounded-xl font-black text-sm shadow-lg transition-all active:scale-95 ${saved ? 'bg-emerald-500 text-white' : 'bg-sky-600 text-white hover:bg-sky-700'
+                            } disabled:opacity-70`}
                     >
                         {saved ? (
                             <>
@@ -227,15 +240,15 @@ const TranslatedRecord: React.FC = () => {
                         {targetLanguages.map(lang => <option key={lang.code} value={lang.code}>{lang.name}</option>)}
                     </select>
                 </div>
-                
+
                 {isLoading && (
                     <div className="text-center">
                         <h2 className="text-lg font-semibold text-slate-700">{t('translationLoading')}</h2>
                     </div>
                 )}
-                
+
                 {error && <p className="text-sm text-red-600 text-center">{error}</p>}
-                
+
                 {!isLoading && analysis && (
                     <div className="space-y-6 pt-4 border-t border-slate-200">
                         <div className="bg-sky-50 p-6 rounded-xl border border-sky-100">
@@ -261,7 +274,7 @@ const TranslatedRecord: React.FC = () => {
                                 </div>
                             </div>
                         )}
-                        
+
                         <div>
                             <h3 className="text-lg font-medium text-slate-800 mb-2">{t('translatedText')}</h3>
                             <div className="w-full p-3 border border-slate-300 rounded-md bg-slate-50 text-sm text-slate-800 whitespace-pre-wrap">

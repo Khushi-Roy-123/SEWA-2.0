@@ -1,6 +1,6 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { AuthProvider, useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { DataProvider, useData } from '@/contexts/DataContext';
 import Layout from '@/components/Layout';
 import Login from '@/pages/Login';
@@ -16,16 +16,17 @@ import TranslatedRecord from '@/pages/TranslatedRecord';
 import MentalHealth from '@/pages/MentalHealth';
 import DrugPrices from '@/pages/DrugPrices';
 import Analytics from '@/pages/Analytics';
+import ClinicPortal from '@/pages/ClinicPortal';
 import ShareProfile from '@/pages/ShareProfile';
 import PublicProfile from '@/pages/PublicProfile';
+import PatientLookup from '@/pages/PatientLookup';
 import EmergencyServices from '@/pages/EmergencyServices';
 import GoogleFitCallback from '@/pages/GoogleFitCallback';
-import { TranslationsProvider } from '@/lib/i18n';
 import { Loader2 } from 'lucide-react';
 import { SpeedInsights } from "@vercel/speed-insights/react";
 
 // Professional Error Boundary for the whole app
-class ErrorBoundary extends React.Component<{children: React.ReactNode}, {hasError: boolean}> {
+class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { hasError: boolean }> {
   constructor(props: any) {
     super(props);
     this.state = { hasError: false };
@@ -53,8 +54,8 @@ const PrivateRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => 
     return (
       <div className="min-h-screen flex items-center justify-center bg-white">
         <div className="flex flex-col items-center gap-4">
-            <Loader2 className="w-10 h-10 animate-spin text-sky-600" />
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Authenticating Secure Session</p>
+          <Loader2 className="w-10 h-10 animate-spin text-sky-600" />
+          <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Authenticating Secure Session</p>
         </div>
       </div>
     );
@@ -66,28 +67,30 @@ const PrivateRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => 
 const AppContent: React.FC = () => {
   return (
     <Router>
-        <Routes>
-            <Route path="/login" element={<Login />} />
-            <Route path="/public-profile/:userId" element={<PublicProfile />} />
-            
-            <Route path="/" element={<PrivateRoute><Layout><Dashboard /></Layout></PrivateRoute>} />
-            <Route path="/appointments" element={<PrivateRoute><Layout><Appointments /></Layout></PrivateRoute>} />
-            <Route path="/medications" element={<PrivateRoute><Layout><Medications /></Layout></PrivateRoute>} />
-            <Route path="/records" element={<PrivateRoute><Layout><Records /></Layout></PrivateRoute>} />
-            <Route path="/emergency-services" element={<PrivateRoute><Layout><EmergencyServices /></Layout></PrivateRoute>} />
-            <Route path="/upload-record" element={<PrivateRoute><Layout><UploadRecord /></Layout></PrivateRoute>} />
-            <Route path="/translated-record" element={<PrivateRoute><Layout><TranslatedRecord /></Layout></PrivateRoute>} />
-            <Route path="/profile" element={<PrivateRoute><Layout><Profile /></Layout></PrivateRoute>} />
-            <Route path="/symptoms" element={<PrivateRoute><Layout><SymptomInput /></Layout></PrivateRoute>} />
-            <Route path="/recommendations" element={<PrivateRoute><Layout><Recommendations /></Layout></PrivateRoute>} />
-            <Route path="/mental-health" element={<PrivateRoute><Layout><MentalHealth /></Layout></PrivateRoute>} />
-            <Route path="/drug-prices" element={<PrivateRoute><Layout><DrugPrices /></Layout></PrivateRoute>} />
-            <Route path="/analytics" element={<PrivateRoute><Layout><Analytics /></Layout></PrivateRoute>} />
-            <Route path="/share" element={<PrivateRoute><Layout><ShareProfile /></Layout></PrivateRoute>} />
-            <Route path="/google-fit-callback" element={<GoogleFitCallback />} />
-            
-            <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
+      <Routes>
+        <Route path="/login" element={<Login />} />
+        <Route path="/public-profile/:userId" element={<PublicProfile />} />
+
+        <Route path="/" element={<PrivateRoute><Layout><Dashboard /></Layout></PrivateRoute>} />
+        <Route path="/appointments" element={<PrivateRoute><Layout><Appointments /></Layout></PrivateRoute>} />
+        <Route path="/medications" element={<PrivateRoute><Layout><Medications /></Layout></PrivateRoute>} />
+        <Route path="/records" element={<PrivateRoute><Layout><Records /></Layout></PrivateRoute>} />
+        <Route path="/emergency-services" element={<PrivateRoute><Layout><EmergencyServices /></Layout></PrivateRoute>} />
+        <Route path="/upload-record" element={<PrivateRoute><Layout><UploadRecord /></Layout></PrivateRoute>} />
+        <Route path="/translated-record" element={<PrivateRoute><Layout><TranslatedRecord /></Layout></PrivateRoute>} />
+        <Route path="/profile" element={<PrivateRoute><Layout><Profile /></Layout></PrivateRoute>} />
+        <Route path="/symptoms" element={<PrivateRoute><Layout><SymptomInput /></Layout></PrivateRoute>} />
+        <Route path="/recommendations" element={<PrivateRoute><Layout><Recommendations /></Layout></PrivateRoute>} />
+        <Route path="/mental-health" element={<PrivateRoute><Layout><MentalHealth /></Layout></PrivateRoute>} />
+        <Route path="/drug-prices" element={<PrivateRoute><Layout><DrugPrices /></Layout></PrivateRoute>} />
+        <Route path="/analytics" element={<PrivateRoute><Layout><Analytics /></Layout></PrivateRoute>} />
+        <Route path="/clinic-portal" element={<PrivateRoute><Layout><ClinicPortal /></Layout></PrivateRoute>} />
+        <Route path="/share" element={<PrivateRoute><Layout><ShareProfile /></Layout></PrivateRoute>} />
+        <Route path="/lookup" element={<PrivateRoute><Layout><PatientLookup /></Layout></PrivateRoute>} />
+        <Route path="/google-fit-callback" element={<GoogleFitCallback />} />
+
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
     </Router>
   );
 };
@@ -95,14 +98,10 @@ const AppContent: React.FC = () => {
 const App: React.FC = () => {
   return (
     <ErrorBoundary>
-        <AuthProvider>
-            <DataProvider>
-                <TranslationsProvider>
-                    <AppContent />
-                    <SpeedInsights />
-                </TranslationsProvider>
-            </DataProvider>
-        </AuthProvider>
+      <DataProvider>
+        <AppContent />
+        <SpeedInsights />
+      </DataProvider>
     </ErrorBoundary>
   );
 };

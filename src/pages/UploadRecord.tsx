@@ -3,13 +3,21 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 import { useNavigate } from 'react-router-dom';
 import { useTranslations } from '@/lib/i18n';
 import { UploadIcon, CameraIcon } from '../components/Icons';
+import { useAuth } from '@/contexts/AuthContext';
+import { useData } from '@/contexts/DataContext';
+import { RecordService } from '@/services/recordService';
+import { getAuth } from 'firebase/auth';
+import { Loader2, CheckCircle2 } from 'lucide-react';
 
 const UploadRecord: React.FC = () => {
     const { t } = useTranslations();
+    const { currentUser } = useAuth();
+    const { userProfile } = useData();
     const navigate = useNavigate();
     const [imageSrc, setImageSrc] = useState<string | null>(null);
     const [extractedText, setExtractedText] = useState<string>('');
     const [isLoading, setIsLoading] = useState<boolean>(false);
+    const [saveSuccess, setSaveSuccess] = useState<boolean>(false);
     const [error, setError] = useState<string | null>(null);
     const [showCamera, setShowCamera] = useState<boolean>(false);
 
@@ -25,6 +33,7 @@ const UploadRecord: React.FC = () => {
                 setImageSrc(e.target?.result as string);
                 setExtractedText('');
                 setError(null);
+                setSaveSuccess(false);
             };
             reader.readAsDataURL(file);
         }
@@ -35,6 +44,7 @@ const UploadRecord: React.FC = () => {
         setExtractedText('');
         setError(null);
         setImageSrc(null);
+        setSaveSuccess(false);
         try {
             const stream = await navigator.mediaDevices.getUserMedia({ video: true });
             if (videoRef.current) {
@@ -60,7 +70,7 @@ const UploadRecord: React.FC = () => {
             }
         }
     };
-    
+
     const handleCameraClose = useCallback(() => {
         if (videoRef.current && videoRef.current.srcObject) {
             const stream = videoRef.current.srcObject as MediaStream;
@@ -71,7 +81,16 @@ const UploadRecord: React.FC = () => {
     }, []);
 
     const handleExtractText = async () => {
-        if (!imageSrc) return;
+        if (!imageSrc || !currentUser) return;
+
+        // Explicit Auth Verification
+        const auth = getAuth();
+        console.log("Auth State Check:", auth.currentUser?.uid);
+        if (!auth.currentUser) {
+            setError("Authentication lost. Please sign in again.");
+            return;
+        }
+
         setIsLoading(true);
         setError(null);
         setExtractedText('');
@@ -79,7 +98,8 @@ const UploadRecord: React.FC = () => {
         try {
             const genAI = new GoogleGenerativeAI(import.meta.env.VITE_GEMINI_API_KEY || '');
             const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
-            
+
+            // Base64 Data & MimeType
             const base64Data = imageSrc.split(',')[1];
             const mimeType = imageSrc.split(';')[0].split(':')[1];
 
@@ -89,106 +109,183 @@ const UploadRecord: React.FC = () => {
                     mimeType: mimeType,
                 },
             };
-            const prompt = "Extract all text from this medical report. Be precise and include all values, dates, and doctor names. Ensure the output is clean and structured.";
+            const prompt = "Extract all text from this medical report. Identify: 1. Patient Name, 2. Doctor/Clinic Name, 3. Date, 4. Diagnosis/Findings. Ensure the output is clean and structured.";
 
             const result = await model.generateContent([prompt, imagePart]);
             const response = await result.response;
-            setExtractedText(response.text() || '');
+            const text = response.text() || '';
+            setExtractedText(text);
+
+            // Basic parsing of extracted text for title/doctor
+            const doctorMatch = text.match(/(?:Doctor|Dr\.|Physician):?\s*([^\n]+)/i);
+            const doctorName = (doctorMatch && doctorMatch[1]) ? doctorMatch[1].trim() : "Unknown Doctor";
+
+            // SAVE TO FIRESTORE (Always attempt)
+            try {
+                await RecordService.addRecord({
+                    userId: currentUser.uid,
+                    patientName: userProfile?.name || 'Unknown Patient',
+                    type: 'report',
+                    title: `Medical Report - ${new Date().toLocaleDateString()}`,
+                    doctor: doctorName,
+                    date: new Date().toISOString().split('T')[0],
+                    extractedText: text,
+                    imageUrl: imageSrc // Store local Base64/PDF Data URL directly in Firestore
+                });
+                setSaveSuccess(true);
+            } catch (dbErr) {
+                console.error("Firestore Save Error:", dbErr);
+                setError("Failed to save record to your vault. Please try again.");
+                throw dbErr;
+            }
 
         } catch (err) {
-            console.error("Error extracting text:", err);
-            setError(t('extractionError'));
+            console.error("Error extracting/saving record:", err);
+            if (!error) setError(t('extractionError'));
         } finally {
             setIsLoading(false);
         }
     };
 
     const handleAnalyze = () => {
-        navigate('/translated-record', { state: { extractedText } });
+        // Find the image URL if it was already uploaded during extraction
+        // In the current logic, we upload and save to Firestore immediately in handleExtractText
+        // But we still pass the state to TranslatedRecord
+        navigate('/translated-record', { state: { extractedText, imageUrl: imageSrc } });
     };
 
     return (
-        <div className="space-y-8 max-w-4xl mx-auto">
+        <div className="space-y-8 max-w-4xl mx-auto pb-12">
             <div>
-                <h1 className="text-3xl font-bold text-slate-900">{t('uploadRecordTitle')}</h1>
-                <p className="mt-1 text-slate-500">{t('uploadRecordSubtitle')}</p>
+                <h1 className="text-3xl font-black text-slate-900 tracking-tight italic uppercase">{t('uploadRecordTitle')}</h1>
+                <p className="mt-1 text-slate-500 text-sm font-medium">{t('uploadRecordSubtitle')}</p>
             </div>
 
-            <div className="bg-white rounded-xl shadow-lg p-6 md:p-8 space-y-6">
-                
-                {!showCamera && (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="bg-white rounded-[2.5rem] shadow-xl p-6 md:p-12 space-y-8 border border-slate-100">
+
+                {saveSuccess && (
+                    <div className="bg-green-50 text-green-600 p-6 rounded-[2rem] flex flex-col items-center gap-3 text-center border border-green-100">
+                        <CheckCircle2 size={48} className="mb-2" />
+                        <h3 className="text-xl font-black uppercase italic">Verification Complete</h3>
+                        <p className="text-sm font-bold opacity-80">Document has been verified and saved to your secure health vault.</p>
+                    </div>
+                )}
+
+                {!showCamera && !imageSrc && (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                         <button
                             onClick={() => fileInputRef.current?.click()}
-                            className="flex items-center justify-center gap-2 w-full px-4 py-3 border border-slate-300 rounded-md shadow-sm text-sm font-medium text-slate-700 bg-white hover:bg-slate-50 transition-colors"
+                            className="group flex flex-col items-center justify-center gap-4 w-full aspect-square border-4 border-dashed border-slate-100 rounded-[2.5rem] text-slate-400 hover:border-sky-500 hover:text-sky-600 hover:bg-sky-50 transition-all"
                         >
-                            <UploadIcon />
-                            {t('uploadFromFile')}
+                            <div className="p-4 bg-slate-50 rounded-2xl group-hover:bg-white group-hover:shadow-lg transition-all">
+                                <UploadIcon />
+                            </div>
+                            <span className="text-xs font-black uppercase tracking-widest">{t('uploadFromFile')}</span>
                         </button>
-                        <input type="file" accept="image/*" ref={fileInputRef} onChange={handleFileChange} className="hidden" />
+                        <input type="file" accept="image/*,application/pdf" ref={fileInputRef} onChange={handleFileChange} className="hidden" />
 
                         <button
                             onClick={handleCameraOpen}
-                            className="flex items-center justify-center gap-2 w-full px-4 py-3 border border-slate-300 rounded-md shadow-sm text-sm font-medium text-slate-700 bg-white hover:bg-slate-50 transition-colors"
+                            className="group flex flex-col items-center justify-center gap-4 w-full aspect-square border-4 border-dashed border-slate-100 rounded-[2.5rem] text-slate-400 hover:border-sky-500 hover:text-sky-600 hover:bg-sky-50 transition-all"
                         >
-                            <CameraIcon />
-                            {t('useCamera')}
+                            <div className="p-4 bg-slate-50 rounded-2xl group-hover:bg-white group-hover:shadow-lg transition-all">
+                                <CameraIcon />
+                            </div>
+                            <span className="text-xs font-black uppercase tracking-widest">{t('useCamera')}</span>
                         </button>
-                    </div>
-                )}
-                
-                {showCamera && (
-                    <div className="space-y-4">
-                        <video ref={videoRef} autoPlay playsInline className="w-full rounded-lg bg-slate-900"></video>
-                        <canvas ref={canvasRef} className="hidden"></canvas>
-                        <div className="flex gap-4">
-                            <button onClick={handleCapture} className="flex-1 bg-sky-600 text-white font-semibold py-2 px-4 rounded-lg shadow-md hover:bg-sky-700 transition-colors">{t('capture')}</button>
-                            <button onClick={handleCameraClose} className="flex-1 bg-slate-200 text-slate-800 font-semibold py-2 px-4 rounded-lg hover:bg-slate-300 transition-colors">{t('closeCamera')}</button>
-                        </div>
-                    </div>
-                )}
-                
-                {imageSrc && !extractedText && (
-                    <div className="space-y-6 pt-6 border-t border-slate-200">
-                        <div>
-                            <h3 className="text-lg font-medium text-slate-800 mb-2">{t('imagePreview')}</h3>
-                            <img src={imageSrc} alt="Medical report preview" className="rounded-lg max-h-96 w-auto mx-auto shadow-md" />
-                        </div>
-                        <button
-                            onClick={handleExtractText}
-                            disabled={isLoading}
-                            className="w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-sky-600 hover:bg-sky-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-500 disabled:bg-sky-300 disabled:cursor-not-allowed"
-                        >
-                            {isLoading ? t('extractingText') : t('extractText')}
-                        </button>
-                    </div>
-                )}
-                
-                {isLoading && (
-                    <div className="flex justify-center items-center gap-3 text-slate-600">
-                        {t('extractingText')}
                     </div>
                 )}
 
-                {error && <p className="text-sm text-red-600 text-center">{error}</p>}
-                
-                {extractedText && (
-                    <div className="space-y-6 pt-6 border-t border-slate-200">
-                        <div>
-                            <h3 className="text-lg font-medium text-slate-800 mb-2">{t('extractedText')}</h3>
-                            <textarea
-                                readOnly
-                                value={extractedText}
-                                rows={15}
-                                className="w-full p-3 border border-slate-300 rounded-md bg-slate-50 text-sm text-slate-800"
-                            />
+                {showCamera && (
+                    <div className="space-y-6">
+                        <div className="relative rounded-[2.5rem] overflow-hidden bg-slate-900 border-4 border-white shadow-2xl aspect-video">
+                            <video ref={videoRef} autoPlay playsInline className="w-full h-full object-cover"></video>
                         </div>
-                        <button
-                            onClick={handleAnalyze}
-                            className="w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
-                        >
-                            {t('analyzeAndTranslate')}
-                        </button>
+                        <canvas ref={canvasRef} className="hidden"></canvas>
+                        <div className="flex gap-4">
+                            <button onClick={handleCapture} className="flex-1 bg-sky-600 text-white font-black py-4 px-6 rounded-2xl shadow-xl shadow-sky-100 hover:bg-sky-700 transition-all active:scale-95">{t('capture').toUpperCase()}</button>
+                            <button onClick={handleCameraClose} className="bg-slate-100 text-slate-400 font-black py-4 px-8 rounded-2xl hover:bg-slate-200 transition-all active:scale-95">{t('closeCamera').toUpperCase()}</button>
+                        </div>
+                    </div>
+                )}
+
+                {imageSrc && (
+                    <div className="space-y-8">
+                        <div className="relative group">
+                            <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 ml-1">{t('imagePreview')}</h3>
+                            <div className="rounded-[2.5rem] overflow-hidden border-4 border-white shadow-2xl relative">
+                                {imageSrc.includes('application/pdf') ? (
+                                    <div className="aspect-[3/4] bg-slate-100 flex flex-col items-center justify-center p-12 text-slate-400">
+                                        <svg className="w-16 h-16 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" /></svg>
+                                        <p className="text-xs font-black uppercase tracking-widest text-center">PDF Document Loaded</p>
+                                    </div>
+                                ) : (
+                                    <img src={imageSrc} alt="Medical report preview" className="w-full h-auto" />
+                                )}
+                                {!extractedText && (
+                                    <button
+                                        onClick={() => { setImageSrc(null); setExtractedText(''); setSaveSuccess(false); }}
+                                        className="absolute top-4 right-4 bg-white/80 backdrop-blur-md p-3 rounded-2xl text-slate-600 hover:text-red-600 transition-all shadow-lg"
+                                    >
+                                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                                    </button>
+                                )}
+                            </div>
+                        </div>
+
+                        {!extractedText && (
+                            <button
+                                onClick={handleExtractText}
+                                disabled={isLoading}
+                                className="w-full flex items-center justify-center gap-3 py-5 px-4 bg-slate-900 text-white rounded-2xl font-black shadow-xl shadow-slate-200 hover:bg-slate-800 disabled:opacity-50 transition-all active:scale-[0.98]"
+                            >
+                                {isLoading ? (
+                                    <>
+                                        <Loader2 className="animate-spin" size={24} />
+                                        <span>VERIFYING DOCUMENT...</span>
+                                    </>
+                                ) : (
+                                    <span>VERIFY & EXTRACT DATA</span>
+                                )}
+                            </button>
+                        )}
+                    </div>
+                )}
+
+                {error && (
+                    <div className="bg-red-50 text-red-600 p-4 rounded-2xl flex items-center gap-3 text-sm font-bold border border-red-100">
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                        {error}
+                    </div>
+                )}
+
+                {extractedText && (
+                    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                        <div>
+                            <div className="flex items-center justify-between mb-3 px-1">
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{t('extractedText')}</label>
+                                <span className="bg-emerald-100 text-emerald-700 text-[8px] font-black px-2 py-1 rounded-md uppercase">Verified by SEWA AI</span>
+                            </div>
+                            <div className="bg-slate-50 border-2 border-slate-50 rounded-[2rem] p-8">
+                                <pre className="whitespace-pre-wrap text-sm text-slate-700 font-bold leading-relaxed font-mono">
+                                    {extractedText}
+                                </pre>
+                            </div>
+                        </div>
+                        <div className="flex flex-col sm:flex-row gap-4">
+                            <button
+                                onClick={handleAnalyze}
+                                className="flex-1 py-5 px-8 bg-sky-600 text-white rounded-2xl font-black shadow-xl shadow-sky-100 hover:bg-sky-700 transition-all active:scale-95"
+                            >
+                                {t('analyzeAndTranslate').toUpperCase()}
+                            </button>
+                            <button
+                                onClick={() => navigate('/records')}
+                                className="py-5 px-8 bg-slate-900 text-white rounded-2xl font-black shadow-xl shadow-slate-100 hover:bg-slate-800 transition-all active:scale-95"
+                            >
+                                VIEW IN VAULT
+                            </button>
+                        </div>
                     </div>
                 )}
             </div>

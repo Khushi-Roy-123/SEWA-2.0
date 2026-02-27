@@ -33,7 +33,7 @@ const DrugPrices: React.FC = () => {
 
         try {
             const genAI = new GoogleGenerativeAI(import.meta.env.VITE_GEMINI_API_KEY || '');
-            const model = genAI.getGenerativeModel({ 
+            const model = genAI.getGenerativeModel({
                 model: "gemini-2.5-flash",
                 generationConfig: { responseMimeType: "application/json" }
             });
@@ -42,7 +42,7 @@ const DrugPrices: React.FC = () => {
 
             const result = await model.generateContent(prompt);
             const response = await result.response;
-            
+
             const parsedJson = JSON.parse(response.text()) as DrugPriceData;
 
             if (parsedJson.brandPrice && parsedJson.generics) {
@@ -58,11 +58,11 @@ const DrugPrices: React.FC = () => {
             setIsLoading(false);
         }
     };
-    
+
     const PriceChart = ({ data }: { data: DrugPriceData }) => {
         const allItems = [{ name: data.brandName, price: data.brandPrice }, ...data.generics];
         const maxPrice = Math.max(...allItems.map(item => item.price));
-    
+
         return (
             <div className="space-y-4">
                 {allItems.map((item, index) => (
@@ -106,9 +106,9 @@ const DrugPrices: React.FC = () => {
                     </button>
                 </form>
             </div>
-            
+
             {isLoading && (
-                 <div className="flex justify-center items-center gap-3 text-slate-600 py-10">
+                <div className="flex justify-center items-center gap-3 text-slate-600 py-10">
                     <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                         <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
@@ -116,21 +116,21 @@ const DrugPrices: React.FC = () => {
                     <span>{t('searching')}</span>
                 </div>
             )}
-            
+
             {error && <p className="text-sm text-red-600 text-center p-4 bg-red-50 rounded-md">{error}</p>}
 
             {priceData && (
-                 <div className="space-y-8">
+                <div className="space-y-8">
                     <div className="bg-white rounded-xl shadow-lg p-6 md:p-8">
                         <h2 className="text-xl font-bold text-slate-800 mb-4">{t('brandNamePrice')}: {priceData.brandName}</h2>
                         <PriceChart data={priceData} />
                     </div>
-                     <div className="bg-white rounded-xl shadow-lg p-6 md:p-8">
+                    <div className="bg-white rounded-xl shadow-lg p-6 md:p-8">
                         <h2 className="text-xl font-bold text-slate-800 mb-4">{t('genericAlternatives')}</h2>
                         <ul className="divide-y divide-slate-200">
-                           {priceData.generics.map((generic, index) => (
-                               <li key={index} className="py-4">
-                                   <div className="flex flex-col sm:flex-row justify-between sm:items-center">
+                            {priceData.generics.map((generic, index) => (
+                                <li key={index} className="py-4">
+                                    <div className="flex flex-col sm:flex-row justify-between sm:items-center">
                                         <div>
                                             <p className="font-semibold text-slate-900">{generic.name}</p>
                                             <p className="text-sm text-slate-500">{t('manufacturer')}: {generic.manufacturer}</p>
@@ -141,12 +141,12 @@ const DrugPrices: React.FC = () => {
                                                 {t('potentialSavings')}: ₹{(priceData.brandPrice - generic.price).toFixed(2)}
                                             </p>
                                         </div>
-                                   </div>
-                               </li>
-                           ))}
+                                    </div>
+                                </li>
+                            ))}
                         </ul>
                     </div>
-                 </div>
+                </div>
             )}
         </div>
     );

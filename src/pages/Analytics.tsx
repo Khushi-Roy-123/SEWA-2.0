@@ -2,14 +2,15 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { useTranslations } from '@/lib/i18n';
 import { useAuth } from '@/contexts/AuthContext';
+import { getAuth } from 'firebase/auth';
 import { RecordService } from '../services/recordService';
 import { UserService, UserProfile } from '../services/userService';
 import { ChartBarIcon, SparklesIcon, ShieldCheckIcon } from '../components/Icons';
 
 declare global {
-  interface Window {
-    Recharts: any;
-  }
+    interface Window {
+        Recharts: any;
+    }
 }
 
 const { LineChart, Line, ResponsiveContainer, YAxis } = window.Recharts || {};
@@ -68,7 +69,7 @@ const Analytics: React.FC = () => {
     const { records, userProfile: globalProfile, isPreloading } = useData();
     const [isLoading, setIsLoading] = useState(false);
     const [localReport, setLocalReport] = useState<AnalyticsReport | null>(null);
-    const [profile, setProfile] = useState<{weight: number | '', height: number | '', age: number | ''}>({ weight: '', height: '', age: '' });
+    const [profile, setProfile] = useState<{ weight: number | '', height: number | '', age: number | '' }>({ weight: '', height: '', age: '' });
     const [error, setError] = useState<string | null>(null);
     const [reportLanguage, setReportLanguage] = useState('English');
     const [isTranslating, setIsTranslating] = useState(false);
@@ -105,7 +106,13 @@ const Analytics: React.FC = () => {
     };
 
     const translateReport = async () => {
-        if (!currentUser || !report) return;
+        // Explicit Auth Verification
+        const auth = getAuth();
+        console.log("Auth State Check (Translate):", auth.currentUser?.uid);
+        if (!auth.currentUser) {
+            setError("Authentication lost. Please sign in again.");
+            return;
+        }
 
         setIsTranslating(true);
         setError(null);
@@ -114,8 +121,8 @@ const Analytics: React.FC = () => {
             const nativeLangName = targetLangObj ? `${targetLangObj.code} (${targetLangObj.name})` : reportLanguage;
 
             const genAI = new GoogleGenerativeAI(import.meta.env.VITE_GEMINI_API_KEY || '');
-            const model = genAI.getGenerativeModel({ 
-                model: "gemini-2.5-flash-lite",
+            const model = genAI.getGenerativeModel({
+                model: "gemini-2.5-flash",
                 generationConfig: { responseMimeType: "application/json" }
             });
 
@@ -137,15 +144,15 @@ const Analytics: React.FC = () => {
             const result = await model.generateContent(prompt);
             const response = await result.response;
             const text = response.text();
-            
+
             const jsonMatch = text.match(/\{[\s\S]*\}/);
             if (!jsonMatch) throw new Error("Invalid JSON response");
-            
+
             const translated = JSON.parse(jsonMatch[0]);
-            
+
             // 1. Update local report state immediately
             setLocalReport(translated);
-            
+
             // 2. Persist to Firebase in background
             // Note: On refresh, the app will still reset the selector to English
             await UserService.updateUserProfile(currentUser.uid, {
@@ -164,6 +171,14 @@ const Analytics: React.FC = () => {
     const runAnalysis = async () => {
         if (!currentUser) return;
 
+        // Explicit Auth Verification
+        const auth = getAuth();
+        console.log("Auth State Check (Analysis):", auth.currentUser?.uid);
+        if (!auth.currentUser) {
+            setError("Authentication lost. Please sign in again.");
+            return;
+        }
+
         setIsLoading(true);
         setError(null);
         try {
@@ -175,7 +190,7 @@ const Analytics: React.FC = () => {
 
             const recentRecords = records.slice(0, 10);
             const contextSignature = `${records.length}-${records[0]?.id || ''}-${profile.age}-${profile.weight}-${profile.height}`;
-            
+
             if (globalProfile?.lastAnalysisHash === contextSignature && report) {
                 setError(t('noChangesDetected'));
                 setIsLoading(false);
@@ -183,7 +198,7 @@ const Analytics: React.FC = () => {
             }
 
             const genAI = new GoogleGenerativeAI(import.meta.env.VITE_GEMINI_API_KEY || '');
-            const model = genAI.getGenerativeModel({ 
+            const model = genAI.getGenerativeModel({
                 model: "gemini-2.5-flash",
                 generationConfig: { responseMimeType: "application/json" }
             });
@@ -195,7 +210,7 @@ const Analytics: React.FC = () => {
             Summary: ${r.summary || 'N/A'}
             Content: ${r.extractedText || r.translatedText || 'N/A'}
             `).join('\n---\n');
-            
+
             const profileContext = `Age: ${profile.age}, Weight: ${profile.weight}kg, Height: ${profile.height}cm`;
 
             const prompt = `Perform a high-integrity, professional medical record analysis.
@@ -224,13 +239,13 @@ const Analytics: React.FC = () => {
             const result = await model.generateContent(prompt);
             const response = await result.response;
             const text = response.text();
-            
+
             const jsonMatch = text.match(/\{[\s\S]*\}/);
             if (!jsonMatch) throw new Error("Invalid JSON response from Health Engine");
-            
+
             const parsed = JSON.parse(jsonMatch[0]);
             parsed.timestamp = new Date().toISOString();
-            
+
             // 1. Force state updates immediately
             setLocalReport(parsed);
             setReportLanguage('English');
@@ -256,8 +271,8 @@ const Analytics: React.FC = () => {
     if (isPreloading && !report) {
         return (
             <div className="flex flex-col items-center justify-center py-20 bg-white rounded-3xl min-h-[400px]">
-                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-sky-600 mb-4"></div>
-                 <p className="text-slate-400 font-bold uppercase text-[10px] tracking-widest">Loading Analytics Dashboard</p>
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-sky-600 mb-4"></div>
+                <p className="text-slate-400 font-bold uppercase text-[10px] tracking-widest">Loading Analytics Dashboard</p>
             </div>
         );
     }
@@ -265,12 +280,21 @@ const Analytics: React.FC = () => {
     return (
         <div className="max-w-6xl mx-auto space-y-8 pb-12">
             <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                <div>
-                    <h1 className="text-3xl font-black text-slate-900 flex items-center gap-3 italic tracking-tighter">
-                        <ChartBarIcon />
-                        {t('analyticsTitle')}
-                    </h1>
-                    <p className="text-slate-500 text-sm font-medium mt-1">AI-driven clinical insights and personalized wellness tracking.</p>
+                <div className="flex items-center gap-4">
+                    {globalProfile?.photoURL && (
+                        <img
+                            src={globalProfile.photoURL}
+                            alt="Profile"
+                            className="w-14 h-14 rounded-2xl border-2 border-white shadow-lg object-cover bg-sky-100"
+                        />
+                    )}
+                    <div>
+                        <h1 className="text-3xl font-black text-slate-900 flex items-center gap-3 italic tracking-tighter">
+                            <ChartBarIcon />
+                            {t('analyticsTitle')}
+                        </h1>
+                        <p className="text-slate-500 text-sm font-medium mt-1">AI-driven clinical insights and personalized wellness tracking.</p>
+                    </div>
                 </div>
                 <div className="flex flex-col sm:flex-row items-center gap-4 bg-white p-2 rounded-[2rem] border border-slate-100 shadow-sm">
                     <div className="flex items-center gap-2 pl-4">
@@ -328,45 +352,45 @@ const Analytics: React.FC = () => {
             )}
 
             <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-                 {/* Profile Sync */}
-                 <div className="lg:col-span-1 space-y-6">
+                {/* Profile Sync */}
+                <div className="lg:col-span-1 space-y-6">
                     <section className="bg-white p-8 rounded-[2.5rem] shadow-sm border border-slate-100">
                         <h2 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-6 flex items-center gap-2">
                             <div className="w-1.5 h-1.5 bg-sky-500 rounded-full"></div>
                             {t('physicalProfile')}
                         </h2>
-                        
+
                         <div className="space-y-5">
                             <div>
                                 <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">Age (Years)</label>
-                                <input 
-                                    type="number" 
-                                    value={profile.age} 
-                                    onChange={e => setProfile({...profile, age: e.target.value === '' ? '' : Math.floor(Number(e.target.value))})} 
-                                    className="w-full bg-slate-50 border-2 border-slate-50 p-3 rounded-2xl focus:bg-white focus:border-sky-500 outline-none transition-all font-bold" 
-                                    placeholder={profile.age ? String(profile.age) : "e.g. 25"} 
+                                <input
+                                    type="number"
+                                    value={profile.age}
+                                    onChange={e => setProfile({ ...profile, age: e.target.value === '' ? '' : Math.floor(Number(e.target.value)) })}
+                                    className="w-full bg-slate-50 border-2 border-slate-50 p-3 rounded-2xl focus:bg-white focus:border-sky-500 outline-none transition-all font-bold"
+                                    placeholder={profile.age ? String(profile.age) : "e.g. 25"}
                                 />
                             </div>
-                            
+
                             <div>
                                 <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">Weight (kg)</label>
-                                <input 
-                                    type="number" 
-                                    value={profile.weight} 
-                                    onChange={e => setProfile({...profile, weight: e.target.value === '' ? '' : Math.floor(Number(e.target.value))})} 
-                                    className="w-full bg-slate-50 border-2 border-slate-50 p-3 rounded-2xl focus:bg-white focus:border-sky-500 outline-none transition-all font-bold" 
-                                    placeholder={profile.weight ? String(profile.weight) : "e.g. 70"} 
+                                <input
+                                    type="number"
+                                    value={profile.weight}
+                                    onChange={e => setProfile({ ...profile, weight: e.target.value === '' ? '' : Math.floor(Number(e.target.value)) })}
+                                    className="w-full bg-slate-50 border-2 border-slate-50 p-3 rounded-2xl focus:bg-white focus:border-sky-500 outline-none transition-all font-bold"
+                                    placeholder={profile.weight ? String(profile.weight) : "e.g. 70"}
                                 />
                             </div>
-                            
+
                             <div>
                                 <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">Height (cm)</label>
-                                <input 
-                                    type="number" 
-                                    value={profile.height} 
-                                    onChange={e => setProfile({...profile, height: e.target.value === '' ? '' : Math.floor(Number(e.target.value))})} 
-                                    className="w-full bg-slate-50 border-2 border-slate-50 p-3 rounded-2xl focus:bg-white focus:border-sky-500 outline-none transition-all font-bold" 
-                                    placeholder={profile.height ? String(profile.height) : "e.g. 175"} 
+                                <input
+                                    type="number"
+                                    value={profile.height}
+                                    onChange={e => setProfile({ ...profile, height: e.target.value === '' ? '' : Math.floor(Number(e.target.value)) })}
+                                    className="w-full bg-slate-50 border-2 border-slate-50 p-3 rounded-2xl focus:bg-white focus:border-sky-500 outline-none transition-all font-bold"
+                                    placeholder={profile.height ? String(profile.height) : "e.g. 175"}
                                 />
                             </div>
 
@@ -397,9 +421,9 @@ const Analytics: React.FC = () => {
                                     <div className="relative">
                                         <svg className="w-32 h-32 transform -rotate-90">
                                             <circle cx="64" cy="64" r="58" stroke="currentColor" strokeWidth="12" fill="transparent" className="text-slate-50" />
-                                            <circle cx="64" cy="64" r="58" stroke="currentColor" strokeWidth="12" fill="transparent" 
+                                            <circle cx="64" cy="64" r="58" stroke="currentColor" strokeWidth="12" fill="transparent"
                                                 strokeDasharray={364.4} strokeDashoffset={364.4 - (364.4 * report.healthScore) / 100}
-                                                className={`${report.healthScore > 70 ? 'text-emerald-500' : report.healthScore > 40 ? 'text-sky-500' : 'text-rose-500'} transition-all duration-1000 ease-out`} 
+                                                className={`${report.healthScore > 70 ? 'text-emerald-500' : report.healthScore > 40 ? 'text-sky-500' : 'text-rose-500'} transition-all duration-1000 ease-out`}
                                             />
                                         </svg>
                                         <div className="absolute inset-0 flex items-center justify-center">
@@ -429,7 +453,7 @@ const Analytics: React.FC = () => {
                             </div>
 
                             {/* Recommendations */}
-                             <div className="bg-white p-8 rounded-[2.5rem] shadow-sm border border-slate-100">
+                            <div className="bg-white p-8 rounded-[2.5rem] shadow-sm border border-slate-100">
                                 <h3 className="text-xs font-black text-slate-400 uppercase tracking-[0.2em] mb-6 flex items-center gap-2">
                                     <div className="w-1.5 h-1.5 bg-sky-500 rounded-full"></div>
                                     AI Clinical Recommendations
@@ -437,7 +461,7 @@ const Analytics: React.FC = () => {
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     {(report.recommendations || []).map((r, i) => (
                                         <div key={i} className="flex items-start gap-4 p-4 bg-slate-50 rounded-2xl border border-slate-100 group hover:bg-white hover:shadow-md transition-all">
-                                            <div className="w-6 h-6 bg-sky-600 text-white rounded-lg flex items-center justify-center text-[10px] font-black shrink-0 shadow-lg shadow-sky-100">{i+1}</div>
+                                            <div className="w-6 h-6 bg-sky-600 text-white rounded-lg flex items-center justify-center text-[10px] font-black shrink-0 shadow-lg shadow-sky-100">{i + 1}</div>
                                             <p className="text-xs font-bold text-slate-700 leading-relaxed">{r}</p>
                                         </div>
                                     ))}
@@ -469,11 +493,10 @@ const Analytics: React.FC = () => {
                                                         <td className="py-5 px-8 font-black text-slate-800 text-xs">{item.metric}</td>
                                                         <td className="py-5 px-8 text-sky-600 font-black text-xs">{item.value}</td>
                                                         <td className="py-5 px-8">
-                                                            <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-tighter shadow-sm border ${
-                                                                item.status === 'Normal' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
+                                                            <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-tighter shadow-sm border ${item.status === 'Normal' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
                                                                 item.status === 'Critical' ? 'bg-rose-50 text-rose-600 border-rose-100' :
-                                                                'bg-amber-50 text-amber-600 border-amber-100'
-                                                            }`}>
+                                                                    'bg-amber-50 text-amber-600 border-amber-100'
+                                                                }`}>
                                                                 {item.status}
                                                             </span>
                                                         </td>
@@ -487,7 +510,7 @@ const Analytics: React.FC = () => {
                             )}
 
                             {/* Diet Plan */}
-                             <div className="bg-white p-8 rounded-[2.5rem] shadow-sm border border-slate-100">
+                            <div className="bg-white p-8 rounded-[2.5rem] shadow-sm border border-slate-100">
                                 <h3 className="text-xs font-black text-slate-400 uppercase tracking-[0.2em] mb-6 flex items-center gap-2">
                                     <div className="w-1.5 h-1.5 bg-orange-600 rounded-full"></div>
                                     Indigenous Diet Protocol

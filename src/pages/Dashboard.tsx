@@ -1,14 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { 
-  CalendarIcon, 
-  PillIcon, 
-  StethoscopeIcon, 
-  UploadIcon, 
-  ChartBarIcon, 
-  SparklesIcon,
-  ShieldCheckIcon
-} from '../components/Icons';
+import { CalendarIcon, PillIcon, StethoscopeIcon, UploadIcon, ChartBarIcon, SparklesIcon, ShieldCheckIcon } from '../components/Icons';
 import { useTranslations } from '@/lib/i18n';
 import { useAuth } from '@/contexts/AuthContext';
 import { Appointment } from '../services/appointmentService';
@@ -17,41 +9,42 @@ import { useData } from '@/contexts/DataContext';
 
 // Local Components for Dashboard
 const StatCard: React.FC<{ label: string; value: string | number; unit?: string; icon: React.ReactNode; color: string }> = ({ label, value, unit, icon, color }) => (
-  <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 flex items-center gap-4">
-    <div className={`p-3 rounded-xl ${color}`}>
-      {icon}
+    <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 flex items-center gap-4">
+        <div className={`p-3 rounded-xl ${color}`}>
+            {icon}
+        </div>
+        <div>
+            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{label}</p>
+            <div className="flex items-baseline gap-1">
+                <span className="text-xl font-bold text-slate-800">{value}</span>
+                {unit && <span className="text-xs font-medium text-slate-400">{unit}</span>}
+            </div>
+        </div>
     </div>
-    <div>
-      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{label}</p>
-      <div className="flex items-baseline gap-1">
-        <span className="text-xl font-bold text-slate-800">{value}</span>
-        {unit && <span className="text-xs font-medium text-slate-400">{unit}</span>}
-      </div>
-    </div>
-  </div>
 );
 
 const PrimaryCard: React.FC<{ title: string; subtitle: string; icon: React.ReactNode; color: string; onClick: () => void }> = ({ title, subtitle, icon, color, onClick }) => (
-  <button 
-    onClick={onClick}
-    className="flex-1 bg-white p-6 rounded-3xl shadow-sm border border-slate-100 hover:shadow-md transition-all text-left group"
-  >
-    <div className={`w-12 h-12 rounded-2xl flex items-center justify-center mb-4 transition-transform group-hover:scale-110 ${color}`}>
-      {icon}
-    </div>
-    <h3 className="text-lg font-bold text-slate-800">{title}</h3>
-    <p className="text-sm text-slate-500 mt-1">{subtitle}</p>
-  </button>
+    <button
+        onClick={onClick}
+        className="flex-1 bg-white p-6 rounded-3xl shadow-sm border border-slate-100 hover:shadow-md transition-all text-left group"
+    >
+        <div className={`w-12 h-12 rounded-2xl flex items-center justify-center mb-4 transition-transform group-hover:scale-110 ${color}`}>
+            {icon}
+        </div>
+        <h3 className="text-lg font-bold text-slate-800">{title}</h3>
+        <p className="text-sm text-slate-500 mt-1">{subtitle}</p>
+    </button>
 );
 
 const { LineChart, Line, ResponsiveContainer, YAxis } = (window as any).Recharts || {};
 
 const Dashboard: React.FC = () => {
+    const [face, face_set] = useState();
     const { t, language } = useTranslations();
     const navigate = useNavigate();
     const { currentUser } = useAuth();
     const { medications, appointments, userProfile, fitData, refreshFitData } = useData();
-    
+
     const [nextMed, setNextMed] = useState<any>(null);
     const [nextApt, setNextApt] = useState<Appointment | null>(null);
     const [healthScore, setHealthScore] = useState<number | null>(null);
@@ -60,13 +53,14 @@ const Dashboard: React.FC = () => {
     const [userName, setUserName] = useState(currentUser?.displayName?.split(' ')[0] || 'User');
     const [activeMedsCount, setActiveMedsCount] = useState(0);
 
+
     useEffect(() => {
         if (!currentUser) return;
 
         if (currentUser.displayName) {
-             setUserName(currentUser.displayName.split(' ')[0]);
+            setUserName(currentUser.displayName.split(' ')[0]);
         }
-        
+
         // Use Preloaded User Profile for Health Score and Trends
         if (userProfile?.lastHealthReport) {
             setHealthScore(userProfile.lastHealthReport.healthScore);
@@ -91,7 +85,7 @@ const Dashboard: React.FC = () => {
         active.forEach((m) => {
             m.reminderTimes.forEach((time) => {
                 const [h, min] = time.split(':').map(Number);
-                const d = new Date(); 
+                const d = new Date();
                 d.setHours(h, min, 0);
                 if (d > now) upcoming.push({ name: m.name, time: time, dateTime: d });
             });
@@ -104,12 +98,14 @@ const Dashboard: React.FC = () => {
         }
     }, [medications]);
 
+
+
     // Calculate Next Appointment from preloaded appointments
     useEffect(() => {
         const upcoming = appointments
-            .filter(a => a.status === 'Upcoming' && new Date(a.date) >= new Date(new Date().setHours(0,0,0,0)))
+            .filter(a => a.status === 'Upcoming' && new Date(a.date) >= new Date(new Date().setHours(0, 0, 0, 0)))
             .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-        
+
         if (upcoming.length > 0) {
             setNextApt(upcoming[0]);
         } else {
@@ -126,49 +122,72 @@ const Dashboard: React.FC = () => {
     return (
         <div className="max-w-6xl mx-auto space-y-8 pb-12">
             {/* Header Section */}
-            <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
-                <div>
-                    <p className="text-sky-600 font-bold text-sm uppercase tracking-widest">{dateStr}</p>
-                    <h1 className="text-3xl md:text-4xl font-black text-slate-900 mt-1">
-                        {t('welcomeBack', { name: userName })}
-                    </h1>
+            <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 px-2">
+                <div className="flex items-center gap-6">
+                    <div className="relative group">
+                        {userProfile?.photoURL ? (
+                            <img
+                                src={userProfile.photoURL}
+                                className="w-20 h-20 rounded-3xl object-cover border-4 border-white shadow-xl bg-sky-50 transition-transform group-hover:scale-105"
+                                alt="Profile"
+                            />
+                        ) : (
+                            <div className="w-20 h-20 rounded-3xl bg-sky-50 border-4 border-white shadow-xl flex items-center justify-center">
+                                <StethoscopeIcon />
+                            </div>
+                        )}
+                        <div className="absolute -bottom-1 -right-1 bg-sky-600 p-1.5 rounded-xl border-2 border-white shadow-lg">
+                            <ShieldCheckIcon />
+                        </div>
+                    </div>
+                    <div>
+                        <p className="text-sky-600 font-black text-[10px] uppercase tracking-[0.2em] mb-1">{dateStr}</p>
+                        <h1 className="text-3xl md:text-5xl font-black text-slate-900 tracking-tighter uppercase italic">
+                            {t('welcomeBack', { name: userName })}
+                        </h1>
+                        <div className="flex items-center gap-2 mt-2">
+                            <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></div>
+                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{language === 'hi' ? 'वास्तविक समय सिंक सक्षम' : 'Real-time Sync Active'}</span>
+                        </div>
+                    </div>
                 </div>
-                <div className="flex items-center gap-2 bg-white px-4 py-2 rounded-2xl shadow-sm border border-slate-100">
-                    <div className="w-3 h-3 bg-sky-500 rounded-full animate-pulse"></div>
-                    <span className="text-xs font-bold text-slate-600 uppercase tracking-tighter">{language === 'hi' ? 'प्रणाली सुरक्षित' : 'System Secure'}</span>
+
+                <div className="hidden lg:flex flex-col items-end gap-1">
+                    <span className="text-[9px] font-black text-slate-300 uppercase tracking-widest leading-none">Secure Sewa Code</span>
+                    <span className="text-xl font-black text-slate-900 tracking-tighter italic">{userProfile?.sewaCode || '------'}</span>
                 </div>
             </div>
 
             {/* Top Stats Strip */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                <StatCard 
-                    label={t('healthAnalytics')} 
-                    value={healthScore || '--'} 
-                    unit="/100" 
-                    icon={<ChartBarIcon />} 
-                    color="bg-sky-100 text-sky-600" 
+                <StatCard
+                    label={t('healthAnalytics')}
+                    value={healthScore || '--'}
+                    unit="/100"
+                    icon={<ChartBarIcon />}
+                    color="bg-sky-100 text-sky-600"
                 />
 
-                <StatCard 
-                    label={language === 'hi' ? 'दैनिक कदम' : 'Daily Steps'} 
-                    value={fitData?.steps || '--'} 
+                <StatCard
+                    label={language === 'hi' ? 'दैनिक कदम' : 'Daily Steps'}
+                    value={fitData?.steps || '--'}
                     unit="Steps"
-                    icon={<div className="text-xl">🏃</div>} 
-                    color="bg-orange-100 text-orange-600" 
+                    icon={<div className="text-xl">🏃</div>}
+                    color="bg-orange-100 text-orange-600"
                 />
-                <StatCard 
-                    label={t('medications')} 
-                    value={activeMedsCount} 
+                <StatCard
+                    label={t('medications')}
+                    value={activeMedsCount}
                     unit={language === 'hi' ? 'आइटम' : 'Items'}
-                    icon={<PillIcon />} 
-                    color="bg-emerald-100 text-emerald-600" 
+                    icon={<PillIcon />}
+                    color="bg-emerald-100 text-emerald-600"
                 />
-                <StatCard 
-                    label="Calories" 
-                    value={fitData?.calories || '--'} 
+                <StatCard
+                    label="Calories"
+                    value={fitData?.calories || '--'}
                     unit="kcal"
-                    icon={<div className="text-xl">🔥</div>} 
-                    color="bg-rose-100 text-rose-600" 
+                    icon={<div className="text-xl">🔥</div>}
+                    color="bg-rose-100 text-rose-600"
                 />
             </div>
 
@@ -186,14 +205,14 @@ const Dashboard: React.FC = () => {
                                 <p className="text-sm text-slate-400 font-medium">Real-time activity and metabolic tracking</p>
                             </div>
                             {!fitData ? (
-                                <button 
+                                <button
                                     onClick={handleGoogleFitSync}
                                     className="px-6 py-2 bg-slate-900 text-white font-black rounded-xl text-xs uppercase tracking-widest hover:bg-slate-800 transition-all active:scale-95"
                                 >
                                     Connect Fit
                                 </button>
                             ) : (
-                                <button 
+                                <button
                                     onClick={handleGoogleFitSync}
                                     className="px-4 py-2 bg-emerald-50 text-emerald-600 font-black rounded-xl text-[10px] uppercase tracking-widest hover:bg-emerald-100 transition-all"
                                 >
@@ -237,13 +256,13 @@ const Dashboard: React.FC = () => {
                                 <ResponsiveContainer width="100%" height="100%">
                                     <LineChart data={trendData}>
                                         <YAxis domain={[0, 100]} hide />
-                                        <Line 
-                                            type="monotone" 
-                                            dataKey="score" 
-                                            stroke="#0ea5e9" 
-                                            strokeWidth={4} 
-                                            dot={{ fill: '#0ea5e9', r: 4 }} 
-                                            activeDot={{ r: 8 }} 
+                                        <Line
+                                            type="monotone"
+                                            dataKey="score"
+                                            stroke="#0ea5e9"
+                                            strokeWidth={4}
+                                            dot={{ fill: '#0ea5e9', r: 4 }}
+                                            activeDot={{ r: 8 }}
                                         />
                                     </LineChart>
                                 </ResponsiveContainer>
@@ -259,7 +278,7 @@ const Dashboard: React.FC = () => {
                 {/* Sidebar Column */}
                 <div className="space-y-8">
                     {/* Next Appointment Card */}
-                    <PrimaryCard 
+                    <PrimaryCard
                         title={nextApt ? nextApt.doctor : (language === 'hi' ? 'कोई अपॉइंटमेंट नहीं' : "No appointments")}
                         subtitle={nextApt ? `${new Date(nextApt.date).toLocaleDateString()} at ${nextApt.time} • ${nextApt.specialty}` : (language === 'hi' ? 'अपनी अगली मुलाकात निर्धारित करें' : "Schedule your next visit")}
                         icon={<CalendarIcon />}
@@ -268,7 +287,7 @@ const Dashboard: React.FC = () => {
                     />
 
                     {/* Next Medication Card */}
-                    <PrimaryCard 
+                    <PrimaryCard
                         title={nextMed ? nextMed.name : (language === 'hi' ? 'कोई खुराक लंबित नहीं' : "No pending doses")}
                         subtitle={nextMed ? (language === 'hi' ? `${nextMed.time} के लिए निर्धारित` : `Scheduled for ${nextMed.time}`) : (language === 'hi' ? 'अपनी दवाएं जोड़ें' : "Add your medications")}
                         icon={<PillIcon />}
@@ -281,14 +300,14 @@ const Dashboard: React.FC = () => {
                         <div className="absolute top-0 right-0 -mr-8 -mt-8 bg-sky-800 rounded-full h-32 w-32 opacity-20"></div>
                         <h2 className="text-lg font-bold mb-4 relative z-10">{t('quickActions')}</h2>
                         <div className="grid grid-cols-1 gap-3 relative z-10">
-                            <button 
+                            <button
                                 onClick={() => navigate('/symptoms')}
                                 className="w-full flex items-center gap-3 bg-sky-800/50 hover:bg-sky-800 p-3 rounded-2xl transition-colors text-sm font-bold"
                             >
                                 <div className="bg-sky-500 p-2 rounded-xl"><StethoscopeIcon /></div>
                                 {t('symptomCheckerActionTitle')}
                             </button>
-                            <button 
+                            <button
                                 onClick={() => navigate('/upload-record')}
                                 className="w-full flex items-center gap-3 bg-sky-800/50 hover:bg-sky-800 p-3 rounded-2xl transition-colors text-sm font-bold"
                             >

@@ -1,12 +1,21 @@
 import { db } from '../lib/firebase';
-import { 
-  collection, addDoc, getDocs, getDoc, doc, deleteDoc, query, where, orderBy, onSnapshot,
-  getDocsFromCache, getDocsFromServer
+import {
+  collection,
+  addDoc,
+  getDocs,
+  query,
+  where,
+  onSnapshot,
+  doc,
+  getDoc,
+  deleteDoc,
+  orderBy
 } from 'firebase/firestore';
 
 export interface MedicalRecord {
   id?: string;
   userId: string;
+  patientName: string;
   type: 'prescription' | 'report' | 'lab';
   title: string;
   doctor: string;
@@ -20,7 +29,7 @@ export interface MedicalRecord {
 }
 
 export const RecordService = {
-  // Add a new medical record
+  // Add a new medical record to Firestore
   async addRecord(data: Omit<MedicalRecord, 'id' | 'createdAt'>) {
     const recordsRef = collection(db, 'records');
     const newRecord = {
@@ -31,70 +40,38 @@ export const RecordService = {
     return { id: docRef.id, ...newRecord } as MedicalRecord;
   },
 
-  // Get all records - Professional speed optimization
+  // Get all records for a user from Firestore
   async getRecords(userId: string): Promise<MedicalRecord[]> {
-    const recordsRef = collection(db, 'records');
-    const q = query(
-      recordsRef, 
-      where('userId', '==', userId),
-      orderBy('createdAt', 'desc')
-    );
-    
-    // FASTEST PATH: Try cache first for instant UI response
     try {
-        const cacheSnapshot = await getDocsFromCache(q);
-        if (!cacheSnapshot.empty) {
-            console.log("RecordService: Serving from cache (Instant)");
-            return cacheSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as MedicalRecord));
-        }
+      const recordsRef = collection(db, 'records');
+      const q = query(recordsRef, where('userId', '==', userId), orderBy('createdAt', 'desc'));
+      const querySnapshot = await getDocs(q);
+      const records: MedicalRecord[] = [];
+      querySnapshot.forEach((doc) => {
+        records.push({ id: doc.id, ...doc.data() } as MedicalRecord);
+      });
+      return records;
     } catch (e) {
-        // Silent fail for cache miss
-    }
-
-    // RELIABLE PATH: Use standard getDocs with a timeout race
-    try {
-        const timeoutPromise = new Promise((_, reject) => 
-            setTimeout(() => reject(new Error('Network timeout')), 8000)
-        );
-
-        const snapshot = await Promise.race([
-            getDocs(q),
-            timeoutPromise
-        ]) as any;
-
-        return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as MedicalRecord));
-    } catch (e) {
-        console.warn("RecordService: Network slow/fail, using fallback", e);
-        // LAST RESORT: Try any available data even if not ordered
-        try {
-            const fallbackTimeout = new Promise((_, reject) => 
-                setTimeout(() => reject(new Error('Fallback timeout')), 5000)
-            );
-            const fallbackQ = query(recordsRef, where('userId', '==', userId));
-            const snapshot = await Promise.race([
-                getDocs(fallbackQ),
-                fallbackTimeout
-            ]) as any;
-            
-            return snapshot.docs
-                .map((doc: any) => ({ id: doc.id, ...doc.data() } as MedicalRecord))
-                .sort((a: MedicalRecord, b: MedicalRecord) => b.createdAt.localeCompare(a.createdAt));
-        } catch (err) {
-            return [];
-        }
+      console.error("RecordService: Error fetching records", e);
+      // Fallback to unordered if index is missing
+      const recordsRef = collection(db, 'records');
+      const q = query(recordsRef, where('userId', '==', userId));
+      const querySnapshot = await getDocs(q);
+      const records: MedicalRecord[] = [];
+      querySnapshot.forEach((doc) => {
+        records.push({ id: doc.id, ...doc.data() } as MedicalRecord);
+      });
+      return records.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
     }
   },
 
-  // Real-time subscription to records
+  // Real-time subscription for records
   subscribeToRecords(userId: string, callback: (records: MedicalRecord[]) => void) {
     const recordsRef = collection(db, 'records');
-    const q = query(
-      recordsRef, 
-      where('userId', '==', userId),
-      orderBy('createdAt', 'desc')
-    );
-    
-    return onSnapshot(q, { includeMetadataChanges: true }, (snapshot) => {
+    const q = query(recordsRef, where('userId', '==', userId), orderBy('createdAt', 'desc'));
+
+    let unsubscribeFallback: (() => void) | null = null;
+    const unsubscribe = onSnapshot(q, (snapshot) => {
       const records: MedicalRecord[] = [];
       snapshot.forEach((doc) => {
         records.push({ id: doc.id, ...doc.data() } as MedicalRecord);
@@ -102,8 +79,9 @@ export const RecordService = {
       callback(records);
     }, (error) => {
       console.warn("Record Sync Error (missing index?):", error);
+      // Fallback
       const fallbackQ = query(recordsRef, where('userId', '==', userId));
-      return onSnapshot(fallbackQ, (snapshot) => {
+      unsubscribeFallback = onSnapshot(fallbackQ, (snapshot) => {
         const records: MedicalRecord[] = [];
         snapshot.forEach((doc) => {
           records.push({ id: doc.id, ...doc.data() } as MedicalRecord);
@@ -111,24 +89,37 @@ export const RecordService = {
         callback(records.sort((a, b) => b.createdAt.localeCompare(a.createdAt)));
       });
     });
+
+    return () => {
+      unsubscribe();
+      if (unsubscribeFallback) unsubscribeFallback();
+    };
   },
 
-  // Get a single record with all details
+  // Get a single record by ID
   async getRecordById(recordId: string): Promise<MedicalRecord | null> {
-    const docRef = doc(db, 'records', recordId);
-    const docSnap = await getDoc(docRef);
-    
-    if (docSnap.exists()) {
-      return { id: docSnap.id, ...docSnap.data() } as MedicalRecord;
-    } else {
+    try {
+      const docRef = doc(db, 'records', recordId);
+      const docSnap = await getDoc(docRef);
+      if (docSnap.exists()) {
+        return { id: docSnap.id, ...docSnap.data() } as MedicalRecord;
+      }
+      return null;
+    } catch (e) {
+      console.error("RecordService: Error getting record", e);
       return null;
     }
   },
 
   // Delete a record
   async deleteRecord(recordId: string) {
-    const docRef = doc(db, 'records', recordId);
-    await deleteDoc(docRef);
-    return true;
+    try {
+      const docRef = doc(db, 'records', recordId);
+      await deleteDoc(docRef);
+      return true;
+    } catch (e) {
+      console.error("RecordService: Error deleting record", e);
+      return false;
+    }
   }
 };
