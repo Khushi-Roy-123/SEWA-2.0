@@ -109,7 +109,7 @@ const UploadRecord: React.FC = () => {
                     mimeType: mimeType,
                 },
             };
-            const prompt = "Extract all text from this medical report. Identify: 1. Patient Name, 2. Doctor/Clinic Name, 3. Date, 4. Diagnosis/Findings. Ensure the output is clean and structured.";
+            const prompt = "Extract all text from this medical report. Identify: 1. Patient Name, 2. Doctor/Clinic Name, 3. Date, 4. Diagnosis/Findings. Ensure the output is clean and structured. IMPORTANT PRIVACY RULE: If you find the patient's real name in the document, REPLACE it with the word 'Patient' in your entire output.";
 
             const result = await model.generateContent([prompt, imagePart]);
             const response = await result.response;

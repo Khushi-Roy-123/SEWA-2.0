@@ -22,6 +22,7 @@ import PublicProfile from '@/pages/PublicProfile';
 import PatientLookup from '@/pages/PatientLookup';
 import EmergencyServices from '@/pages/EmergencyServices';
 import GoogleFitCallback from '@/pages/GoogleFitCallback';
+import BusinessApi from '@/pages/BusinessApi';
 import { Loader2 } from 'lucide-react';
 import { SpeedInsights } from "@vercel/speed-insights/react";
 
@@ -87,6 +88,7 @@ const AppContent: React.FC = () => {
         <Route path="/clinic" element={<PrivateRoute><ClinicPortal /></PrivateRoute>} />
         <Route path="/share" element={<PrivateRoute><Layout><ShareProfile /></Layout></PrivateRoute>} />
         <Route path="/lookup" element={<PrivateRoute><Layout><PatientLookup /></Layout></PrivateRoute>} />
+        <Route path="/api-portal" element={<PrivateRoute><Layout><BusinessApi /></Layout></PrivateRoute>} />
         <Route path="/google-fit-callback" element={<GoogleFitCallback />} />
 
         <Route path="*" element={<Navigate to="/" replace />} />

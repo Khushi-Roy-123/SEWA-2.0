@@ -85,7 +85,7 @@ const TranslatedRecord: React.FC = () => {
                 2. "criticalPhrases": An array of important medical terms or findings found in the text (in English).
                 3. "title": A concise, professional title for this record (in English).
                 4. "doctor": The name of the doctor or healthcare provider, or "Unknown" if not found.
-                5. "summary": A clear, empathetic medical summary in plain English explaining the report's significance. Mention if the report belongs to "${userProfile?.name || 'the patient'}" based on any names found in the text.
+                5. "summary": A clear, empathetic medical summary in plain English explaining the report's significance. IMPORTANT PRIVACY RULE: NEVER include the patient's real name. Use "the patient" instead. 
                 6. "bloodGroup": The patient's blood group if mentioned (e.g., "A+", "O-").
                 7. "allergies": Any mentioned allergies or "None" if not found.
 

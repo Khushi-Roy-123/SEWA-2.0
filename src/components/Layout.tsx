@@ -68,6 +68,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
         { href: '/emergency-services', label: t('emergencyServices'), icon: <TruckIcon /> },
         { href: '/drug-prices', label: t('drugPrices'), icon: <CurrencyDollarIcon /> },
         { href: '/share', label: t('shareProfile'), icon: <QrCodeIcon /> },
+        { href: '/api-portal', label: 'API Portal', icon: <ChartBarIcon /> },
     ];
 
     const bottomNavItems = [...navItems.slice(0, 4), { href: '/profile', label: t('profile'), icon: <UserIcon /> }];

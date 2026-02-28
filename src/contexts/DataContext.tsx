@@ -16,6 +16,7 @@ interface DataContextType {
   isPreloading: boolean;
   isFitLoading: boolean;
   refreshFitData: () => Promise<void>;
+  disconnectGoogleFit: () => void;
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
@@ -39,8 +40,14 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [isFitLoading, setIsFitLoading] = useState(false);
 
   const refreshFitData = async () => {
-    const token = localStorage.getItem('google_fit_token');
-    const expiry = localStorage.getItem('google_fit_token_expiry');
+    if (!currentUser) {
+      setFitData(null);
+      return;
+    }
+
+    const uid = currentUser.uid;
+    const token = localStorage.getItem(`google_fit_token_${uid}`);
+    const expiry = localStorage.getItem(`google_fit_token_expiry_${uid}`);
     const isExpired = expiry && new Date().getTime() > parseInt(expiry);
 
     if (token && !isExpired) {
@@ -51,7 +58,8 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       } catch (error) {
         console.error("Error fetching Fit data", error);
         if (error instanceof Error && error.message.includes('401')) {
-          localStorage.removeItem('google_fit_token');
+          localStorage.removeItem(`google_fit_token_${uid}`);
+          localStorage.removeItem(`google_fit_token_expiry_${uid}`);
         }
       } finally {
         setIsFitLoading(false);
@@ -59,6 +67,14 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     } else {
       setFitData(null);
     }
+  };
+
+  const disconnectGoogleFit = () => {
+    if (currentUser) {
+      localStorage.removeItem(`google_fit_token_${currentUser.uid}`);
+      localStorage.removeItem(`google_fit_token_expiry_${currentUser.uid}`);
+    }
+    setFitData(null);
   };
 
   useEffect(() => {
@@ -141,7 +157,8 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     fitData,
     isPreloading,
     isFitLoading,
-    refreshFitData
+    refreshFitData,
+    disconnectGoogleFit
   };
 
   return (

@@ -1,7 +1,7 @@
 import React, { useRef, useEffect, useState, useCallback } from 'react';
-import { Camera, RefreshCw, CheckCircle2, AlertCircle, Scan } from 'lucide-react';
+import { Camera, RefreshCw, CheckCircle2, AlertCircle, Scan, Upload, ImageIcon } from 'lucide-react';
 
-import { getFaceDescriptor } from '../lib/faceRecognition';
+import { getFaceDescriptor, getFaceDescriptorFromFile } from '../lib/faceRecognition';
 
 interface FaceCaptureProps {
   onCapture: (imageDataUrl: string) => void;
@@ -24,6 +24,8 @@ const FaceCapture: React.FC<FaceCaptureProps> = ({ onCapture, onCaptureWithDescr
   const [isVerifying, setIsVerifying] = useState(false);
   const [verificationError, setVerificationError] = useState<string | null>(null);
   const [capturedDescriptor, setCapturedDescriptor] = useState<number[] | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isUploadProcessing, setIsUploadProcessing] = useState(false);
 
   const startCamera = useCallback(async () => {
     try {
@@ -134,6 +136,41 @@ const FaceCapture: React.FC<FaceCaptureProps> = ({ onCapture, onCaptureWithDescr
 
   const handleRetake = () => {
     startCamera();
+  };
+
+  // Handle photo upload from file
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsUploadProcessing(true);
+    setVerificationError(null);
+    setCapturedDescriptor(null);
+
+    // Stop camera if running
+    if (stream) {
+      stream.getTracks().forEach(track => track.stop());
+      setStream(null);
+    }
+
+    try {
+      const { descriptor, dataUrl } = await getFaceDescriptorFromFile(file);
+      setCapturedPhoto(dataUrl);
+
+      if (descriptor) {
+        setCapturedDescriptor(descriptor);
+        setVerificationError(null);
+      } else {
+        setVerificationError('No face detected in the uploaded photo. Please try a clearer photo with good lighting.');
+      }
+    } catch (err) {
+      console.error('Upload processing failed:', err);
+      setVerificationError('Failed to process the uploaded photo. Please try another image.');
+    } finally {
+      setIsUploadProcessing(false);
+      // Reset file input
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
   };
 
   // Simplified Detection logic for real-time guidance ONLY
@@ -314,6 +351,15 @@ const FaceCapture: React.FC<FaceCaptureProps> = ({ onCapture, onCaptureWithDescr
                 <Camera size={28} />
                 CAPTURE PHOTO
               </button>
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={isUploadProcessing}
+                className="px-6 py-5 bg-sky-50 text-sky-700 rounded-[1.5rem] font-black hover:bg-sky-100 transition-all border-2 border-sky-200 flex items-center justify-center gap-3 active:scale-95"
+              >
+                <Upload size={22} />
+                UPLOAD
+              </button>
               {onCancel && (
                 <button
                   type="button"
@@ -329,6 +375,21 @@ const FaceCapture: React.FC<FaceCaptureProps> = ({ onCapture, onCaptureWithDescr
       </div>
 
       <canvas ref={canvasRef} className="hidden" />
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        onChange={handleFileUpload}
+        className="hidden"
+      />
+
+      {/* Upload Processing Overlay */}
+      {isUploadProcessing && (
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex flex-col items-center justify-center z-50">
+          <RefreshCw className="animate-spin mb-4 text-white" size={48} />
+          <p className="text-xs font-black text-white uppercase tracking-widest">Analyzing Photo for Face...</p>
+        </div>
+      )}
     </div>
   );
 };

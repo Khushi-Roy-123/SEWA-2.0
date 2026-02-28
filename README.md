@@ -98,10 +98,103 @@ This will generate a `dist` folder that you can deploy to platforms like **Verce
 
 ---
 
-## �️ Privacy & Security
+## 📡 Business Data API
+
+SEWA provides a **Business Data API** for authorized partners to access anonymized, aggregated health data for research, analytics, and business intelligence.
+
+### Authentication
+
+All API requests require a Bearer token. Generate your API key from the **API Portal** (`/api-portal`) inside the app.
+
+```
+Authorization: Bearer sewa_YOUR_API_KEY
+```
+
+### Endpoints
+
+#### `GET /api/v1/health-stats`
+
+Returns aggregated, anonymized health statistics across the platform.
+
+```bash
+curl -X GET "https://api.sewa.health/v1/health-stats" \
+  -H "Authorization: Bearer sewa_YOUR_API_KEY" \
+  -H "Content-Type: application/json"
+```
+
+**Response:**
+
+```json
+{
+  "totalPatients": 1247,
+  "bloodGroupDistribution": { "O+": 412, "A+": 289, "B+": 234 },
+  "ageDemographics": [
+    { "range": "0-18", "count": 156 },
+    { "range": "19-30", "count": 389 }
+  ],
+  "genderDistribution": { "Male": 620, "Female": 580 },
+  "avgHealthScore": 72,
+  "totalClinicVisits": 5823,
+  "dataTimestamp": "2026-02-28T10:00:00.000Z"
+}
+```
+
+#### `GET /api/v1/queue-analytics`
+
+Returns clinic queue analytics including wait times, peak hours, and visit patterns.
+
+```bash
+curl -X GET "https://api.sewa.health/v1/queue-analytics" \
+  -H "Authorization: Bearer sewa_YOUR_API_KEY"
+```
+
+**Response:**
+
+```json
+{
+  "avgWaitTime": "14min",
+  "peakHours": ["10:00", "14:00", "16:00"],
+  "dailyVisits": 47,
+  "busiestDay": "Monday"
+}
+```
+
+### Rate Limits
+
+| Limit         | Value          |
+|---------------|----------------|
+| Requests/Day  | 1,000          |
+| Requests/Min  | 100            |
+| Keys/Account  | 5              |
+
+### Key Management
+
+- **Generate** keys from the API Portal dashboard
+- **Revoke** compromised keys instantly
+- **Monitor** usage and request counts per key
+
+---
+
+## 🔬 Real-Time Face Recognition (Clinic Portal)
+
+The Clinic Portal (`/clinic`) features an **always-on camera mode** powered by face-api.js:
+
+- **Live Camera Toggle** — Activates the webcam to continuously scan for faces
+- **Auto-Identification** — Matches detected faces against registered patient biometrics in real-time
+- **Auto Queue Check-in** — Recognized patients are automatically added to the waiting queue (with 30s cooldown)
+- **Visual Overlay** — Bounding boxes with patient names drawn on the live camera feed
+- **Multi-Face Support** — Detects and identifies multiple people simultaneously
+
+> **Note:** For best accuracy, ensure patients register their face during signup with good lighting. The system uses a confidence threshold of 0.65 for matching.
+
+---
+
+## 🔒️ Privacy & Security
 
 - **Session-Only Data**: For this MVP version, data like appointments and profile details are stored in-memory. This ensures privacy as no data persists once the browser session ends or the page is refreshed.
 - **Public Profile**: The emergency profile is designed to be public-read-only via QR code for safety.
+- **Per-User Google Fit**: Google Fit tokens are stored per-user — switching accounts never leaks health data between users.
+- **API Data**: Business API only serves **anonymized, aggregated** data — no individual patient records are ever exposed.
 
 ---
 

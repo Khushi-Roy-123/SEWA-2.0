@@ -75,6 +75,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const logout = async () => {
+    // Clean up any legacy global Google Fit tokens that might leak between accounts
+    localStorage.removeItem('google_fit_token');
+    localStorage.removeItem('google_fit_token_expiry');
     await signOut(auth);
   };
 

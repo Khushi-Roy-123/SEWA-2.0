@@ -214,6 +214,7 @@ const Analytics: React.FC = () => {
             1. DO NOT change medical values, dates, or lab results.
             2. Calculate "healthScore" (1-100) based on clinical data.
             3. Provide specific, actionable, and medically-sound recommendations.
+            4. PRIVACY CRITICAL: NEVER use the patient's real name in any text, summary, or recommendation. Always use the word "patient" or "person".
 
             Patient Context:
             Profile: ${profileContext}

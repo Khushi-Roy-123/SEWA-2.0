@@ -388,6 +388,35 @@ const PublicProfile: React.FC = () => {
                                     </p>
                                 </div>
                             )}
+
+                            {selectedRecord.imageUrl && (
+                                <div className="space-y-2">
+                                    <div className="flex items-center justify-between">
+                                        <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Original Document</h3>
+                                        <a
+                                            href={selectedRecord.imageUrl}
+                                            download={selectedRecord.title.replace(/\s+/g, '_') + (selectedRecord.imageUrl.startsWith('data:application/pdf') ? '.pdf' : '.jpg')}
+                                            className="text-[9px] font-black text-sky-600 uppercase hover:underline"
+                                        >
+                                            Download
+                                        </a>
+                                    </div>
+                                    <div className="rounded-xl overflow-hidden border-2 border-slate-100 shadow-sm relative group bg-slate-50">
+                                        {selectedRecord.imageUrl.startsWith('data:application/pdf') ? (
+                                            <div className="w-full h-[200px] flex flex-col items-center justify-center gap-4">
+                                                <div className="p-4 bg-red-50 rounded-2xl">
+                                                    <svg className="w-12 h-12 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                                    </svg>
+                                                </div>
+                                                <p className="text-sm font-bold text-slate-600">PDF Document</p>
+                                            </div>
+                                        ) : (
+                                            <img src={selectedRecord.imageUrl} alt="Medical record" className="w-full h-auto object-contain max-h-[400px]" />
+                                        )}
+                                    </div>
+                                </div>
+                            )}
                         </div>
 
                         <div className="p-6 border-t border-slate-50 bg-slate-50/30">
